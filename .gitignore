@@ -3,3 +3,5 @@ greek-b1-app/node_modules/
 greek-b1-app/dist/
 .DS_Store
 *.log
+
+*.tsbuildinfo
