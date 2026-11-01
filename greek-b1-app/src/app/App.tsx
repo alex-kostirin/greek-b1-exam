@@ -13,10 +13,6 @@ import { useAppStore } from './providers/AppStoreProvider';
 
 export const App: React.FC = () => {
   const { state, dispatch, speakGreek } = useAppStore();
-  const isCenteredTab =
-    state.activeTab === 'swipe' ||
-    state.activeTab === 'quiz' ||
-    state.activeTab === 'match';
 
   return (
     <div className="h-dvh w-full flex flex-col overflow-hidden bg-[#0a131f] text-slate-50">
@@ -25,8 +21,10 @@ export const App: React.FC = () => {
       <main className="relative min-h-0 w-full flex-1 overflow-y-auto overflow-x-hidden">
         <div
           className={
-            isCenteredTab
-              ? 'max-w-lg mx-auto w-full h-full flex flex-col justify-center px-3.5 py-2.5'
+            state.activeTab === 'swipe'
+              ? 'max-w-lg mx-auto w-full h-full flex flex-col justify-center px-3.5 py-2'
+              : state.activeTab === 'quiz' || state.activeTab === 'match'
+              ? 'max-w-lg mx-auto w-full min-h-full flex flex-col px-3.5 py-2.5'
               : 'max-w-3xl mx-auto w-full px-3.5 py-3'
           }
         >

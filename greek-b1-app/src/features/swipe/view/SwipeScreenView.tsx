@@ -26,8 +26,12 @@ export const SwipeScreenView: React.FC<SwipeScreenViewProps> = ({
   const srsRecord = state.srsMap[currentCard.greek];
   const currentBox = srsRecord?.box ?? 0;
   const intervalLabel = srsService.formatNextIntervalLabel(srsRecord);
-  const showPronunciationButton =
-    state.directionGreekToRussian || state.isCardRevealed;
+  const promptText = state.directionGreekToRussian
+    ? currentCard.greek
+    : currentCard.russian;
+  const answerText = state.directionGreekToRussian
+    ? currentCard.russian
+    : currentCard.greek;
 
   const {
     offsetX,
@@ -64,6 +68,52 @@ export const SwipeScreenView: React.FC<SwipeScreenViewProps> = ({
       : offsetX < -45
       ? 'border-rose-500'
       : 'border-slate-700/80';
+  const backBorderColorClass =
+    offsetX > 45 || offsetX < -45 ? borderColorClass : 'border-teal-500/40';
+
+  const renderCardTopBar = (
+    showPronunciationButton: boolean,
+    isFaceActive: boolean
+  ) => (
+    <div className="flex w-full shrink-0 items-start justify-between gap-2">
+      <div className="flex min-w-0 flex-col items-start gap-1.5">
+        <span className="inline-flex h-6 max-w-full select-none items-center truncate rounded-full bg-sky-400/15 px-2.5 text-[10px] font-semibold uppercase leading-none tracking-wider text-sky-400">
+          {currentCard.module}
+        </span>
+        <div className="flex max-w-full items-center gap-1.5">
+          <span
+            className={`inline-flex h-5 shrink-0 items-center rounded-full border px-2 text-[10px] font-bold leading-none ${srsStatusClass}`}
+          >
+            {srsStatusLabel}
+          </span>
+          <span
+            className="truncate text-[10px] font-medium leading-none text-slate-500"
+            title={intervalLabel}
+          >
+            {intervalLabel}
+          </span>
+        </div>
+      </div>
+
+      {showPronunciationButton ? (
+        <button
+          type="button"
+          tabIndex={isFaceActive ? 0 : -1}
+          aria-label="Произнести греческое слово"
+          onKeyDown={(event) => event.stopPropagation()}
+          onClick={(event) => {
+            event.stopPropagation();
+            speakGreek(currentCard.greek);
+          }}
+          className="flex h-10 w-10 shrink-0 select-none items-center justify-center rounded-full border border-sky-400/30 bg-sky-400/15 text-sky-400 transition active:scale-90"
+        >
+          <VolumeOnIcon className="h-5 w-5" />
+        </button>
+      ) : (
+        <span aria-hidden="true" className="h-10 w-10 shrink-0" />
+      )}
+    </div>
+  );
 
   return (
     <div className="flex h-full min-h-0 flex-col justify-between gap-2.5">
@@ -95,11 +145,9 @@ export const SwipeScreenView: React.FC<SwipeScreenViewProps> = ({
           onMouseLeave={onMouseLeave}
           style={{
             transform: `translateX(${offsetX}px) rotate(${offsetX * 0.035}deg)`,
-            transition: isDragging
-              ? 'none'
-              : 'transform 0.2s ease, border-color 0.2s ease',
+            transition: isDragging ? 'none' : 'transform 0.2s ease',
           }}
-          className={`relative flex h-full max-h-[500px] w-full cursor-pointer touch-pan-y select-none flex-col items-center rounded-3xl border ${borderColorClass} bg-gradient-to-b from-[#182338] to-[#101927] p-3.5 text-center shadow-2xl will-change-transform sm:p-4`}
+          className="perspective-1200 relative h-full max-h-[500px] w-full cursor-pointer touch-pan-y select-none rounded-3xl will-change-transform"
         >
           {offsetX > 15 && (
             <div
@@ -121,102 +169,75 @@ export const SwipeScreenView: React.FC<SwipeScreenViewProps> = ({
             </div>
           )}
 
-          <div className="flex w-full shrink-0 items-start justify-between gap-2">
-            <div className="flex min-w-0 flex-col items-start gap-1.5">
-              <span className="inline-flex h-6 max-w-full select-none items-center truncate rounded-full bg-sky-400/15 px-2.5 text-[10px] font-semibold uppercase leading-none tracking-wider text-sky-400">
-                {currentCard.module}
-              </span>
-              <div className="flex max-w-full items-center gap-1.5">
-                <span
-                  className={`inline-flex h-5 shrink-0 items-center rounded-full border px-2 text-[10px] font-bold leading-none ${srsStatusClass}`}
-                >
-                  {srsStatusLabel}
-                </span>
-                <span
-                  className="truncate text-[10px] font-medium leading-none text-slate-500"
-                  title={intervalLabel}
-                >
-                  {intervalLabel}
-                </span>
+          <div
+            key={currentCard.greek}
+            className="preserve-3d relative h-full w-full"
+            style={{
+              transform: state.isCardRevealed ? 'rotateY(180deg)' : 'rotateY(0deg)',
+              transition: 'transform 0.48s cubic-bezier(0.22, 1, 0.36, 1)',
+              willChange: 'transform',
+            }}
+          >
+            <div
+              aria-hidden={state.isCardRevealed}
+              className={`backface-hidden absolute inset-0 flex flex-col overflow-hidden rounded-3xl border ${borderColorClass} bg-gradient-to-b from-[#182338] to-[#101927] p-3.5 text-center shadow-2xl transition-[border-color] duration-200 sm:p-4`}
+            >
+              {renderCardTopBar(
+                state.directionGreekToRussian,
+                !state.isCardRevealed
+              )}
+
+              <div className="my-auto flex min-h-0 w-full flex-col items-center justify-center px-1 py-3">
+                <div className="max-w-full select-text break-words text-3xl font-extrabold leading-tight text-white sm:text-4xl">
+                  {promptText}
+                </div>
+              </div>
+
+              <div className="flex w-full shrink-0 justify-center pt-1">
+                <div className="inline-flex items-center justify-center rounded-full border border-slate-700/70 bg-slate-900/45 px-4 py-2 text-[11px] font-medium text-slate-400">
+                  Тапни, чтобы перевернуть карточку ↻
+                </div>
               </div>
             </div>
 
-            {showPronunciationButton ? (
-              <button
-                type="button"
-                aria-label="Произнести греческое слово"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  speakGreek(currentCard.greek);
-                }}
-                className="flex h-10 w-10 shrink-0 select-none items-center justify-center rounded-full border border-sky-400/30 bg-sky-400/15 text-sky-400 transition active:scale-90"
-              >
-                <VolumeOnIcon className="h-5 w-5" />
-              </button>
-            ) : (
-              <span aria-hidden="true" className="h-10 w-10 shrink-0" />
-            )}
-          </div>
-
-          <div
-            key={state.isCardRevealed ? 'card-revealed' : 'card-concealed'}
-            className="animate-card-flip my-auto flex min-h-0 w-full flex-col items-center justify-center gap-2 py-2"
-          >
             <div
-              className={`flex w-full items-center justify-center px-1 transition-[padding] duration-200 ${
-                state.isCardRevealed ? 'py-0.5' : 'min-h-[104px] py-2.5'
-              }`}
+              aria-hidden={!state.isCardRevealed}
+              className={`backface-hidden rotate-y-180 absolute inset-0 flex flex-col overflow-hidden rounded-3xl border ${backBorderColorClass} bg-gradient-to-br from-[#13283c] to-[#0d1826] p-3.5 text-center shadow-2xl transition-[border-color] duration-200 sm:p-4`}
             >
-              {state.directionGreekToRussian ? (
-                <div className="max-w-full select-text text-3xl font-extrabold leading-tight text-white break-words sm:text-4xl">
-                  {currentCard.greek}
-                </div>
-              ) : (
-                <div className="max-w-full select-text break-words text-3xl font-extrabold leading-tight text-white sm:text-4xl">
-                  {currentCard.russian}
-                </div>
-              )}
-            </div>
+              {renderCardTopBar(true, state.isCardRevealed)}
 
-            <div className="flex w-full shrink-0 flex-col items-center justify-center">
-              {state.isCardRevealed ? (
-                <div className="animate-fade-up flex w-full flex-col items-center gap-2">
-                  {state.directionGreekToRussian ? (
-                    <div className="max-w-full select-text break-words text-lg font-bold leading-snug text-teal-300 sm:text-xl">
-                      {currentCard.russian}
-                    </div>
-                  ) : (
-                    <div className="max-w-full select-text break-words text-xl font-extrabold leading-tight text-teal-300 sm:text-2xl">
-                      {currentCard.greek}
-                    </div>
-                  )}
-
-                  {currentCard.grammarHint && (
-                    <div className="rounded-lg bg-amber-500/15 px-2.5 py-0.5 text-[11px] font-semibold leading-relaxed text-amber-400">
-                      {currentCard.grammarHint}
-                    </div>
-                  )}
-
-                  <CardIllustrationView item={currentCard} compact />
-
-                  <button
-                    type="button"
-                    aria-label="Произнести греческий пример"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      speakGreek(currentCard.example);
-                    }}
-                    className="flex w-full items-center gap-2 rounded-xl border-l-[3px] border-sky-400 bg-[#0a131f]/85 px-3 py-2 text-left text-[12px] leading-snug text-slate-200 transition hover:text-white"
-                  >
-                    <VolumeOnIcon className="h-4 w-4 shrink-0 text-sky-400" />
-                    <span className="select-text">{currentCard.example}</span>
-                  </button>
+              <div className="no-scrollbar my-auto flex min-h-0 w-full flex-col items-center justify-center gap-2.5 overflow-y-auto px-0.5 py-2">
+                <div className="max-w-full select-text break-words text-sm font-semibold leading-snug text-slate-400">
+                  {promptText}
                 </div>
-              ) : (
-                <div className="inline-flex items-center justify-center rounded-full border border-slate-700/70 bg-slate-900/45 px-4 py-2 text-[11px] font-medium text-slate-400">
-                  Тапни для перевода и ассоциации 👆
+
+                <div className="max-w-full select-text break-words text-2xl font-extrabold leading-snug text-teal-300 sm:text-3xl">
+                  {answerText}
                 </div>
-              )}
+
+                {currentCard.grammarHint && (
+                  <div className="max-w-full rounded-lg bg-amber-500/15 px-2.5 py-0.5 text-xs font-semibold leading-relaxed text-amber-300">
+                    {currentCard.grammarHint}
+                  </div>
+                )}
+
+                <CardIllustrationView item={currentCard} compact />
+
+                <button
+                  type="button"
+                  tabIndex={state.isCardRevealed ? 0 : -1}
+                  aria-label="Произнести греческий пример"
+                  onKeyDown={(event) => event.stopPropagation()}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    speakGreek(currentCard.example);
+                  }}
+                  className="flex w-full shrink-0 items-center gap-2 rounded-xl border-l-[3px] border-sky-400 bg-[#08101a]/90 px-3 py-2 text-left text-xs leading-snug text-slate-100 transition hover:bg-[#0b1724] hover:text-white"
+                >
+                  <VolumeOnIcon className="h-4 w-4 shrink-0 text-sky-400" />
+                  <span className="select-text">{currentCard.example}</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -98,31 +98,6 @@ export const AppStoreProvider: React.FC<{ children: React.ReactNode }> = ({
     state.autoTtsEnabled,
     state.directionGreekToRussian,
     state.quizQuestion.targetItem.greek,
-    state.quizQuestion.selectedOptionGreek,
-  ]);
-
-  useEffect(() => {
-    if (
-      state.activeTab !== 'quiz' ||
-      state.quizQuestion.selectedOptionGreek === null
-    ) {
-      return;
-    }
-
-    const isCorrect =
-      state.quizQuestion.selectedOptionGreek ===
-      state.quizQuestion.targetItem.greek;
-    const delayMs = isCorrect ? 650 : 1400;
-
-    const timerId = window.setTimeout(() => {
-      rawDispatch({ type: 'QUIZ_NEXT_QUESTION' });
-    }, delayMs);
-
-    return () => window.clearTimeout(timerId);
-  }, [
-    state.activeTab,
-    state.quizQuestion.selectedOptionGreek,
-    state.quizQuestion.targetItem.greek,
   ]);
 
   useEffect(() => {
@@ -164,7 +139,7 @@ export const AppStoreProvider: React.FC<{ children: React.ReactNode }> = ({
             intent.optionGreek === state.quizQuestion.targetItem.greek;
           telegramService.triggerHaptic(isCorrect ? 'success' : 'error');
 
-          if (isCorrect && state.autoTtsEnabled) {
+          if (isCorrect && state.autoTtsEnabled && !state.directionGreekToRussian) {
             speechService.speakGreek(state.quizQuestion.targetItem.greek);
           }
           break;
@@ -194,7 +169,7 @@ export const AppStoreProvider: React.FC<{ children: React.ReactNode }> = ({
 
       rawDispatch(intent);
     },
-    [state.quizQuestion.targetItem.greek, state.autoTtsEnabled],
+    [state.quizQuestion.targetItem.greek, state.autoTtsEnabled, state.directionGreekToRussian],
   );
 
   const speakGreek = useCallback((text: string) => {

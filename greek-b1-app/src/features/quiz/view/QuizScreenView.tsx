@@ -59,11 +59,11 @@ export const QuizScreenView: React.FC<QuizScreenViewProps> = ({
 
       <div className="flex min-h-[58px] items-center justify-center break-words px-1 py-1 text-center">
         {state.directionGreekToRussian ? (
-          <div className="max-w-full select-text break-words text-3xl font-extrabold leading-tight text-white sm:text-4xl">
+          <div className="max-w-full select-text break-words text-2xl font-extrabold leading-tight text-white sm:text-3xl">
             {targetItem.greek}
           </div>
         ) : (
-          <div className="select-text text-3xl font-extrabold leading-tight text-white sm:text-4xl">
+          <div className="select-text text-2xl font-extrabold leading-tight text-white sm:text-3xl">
             {targetItem.russian}
           </div>
         )}
@@ -112,7 +112,7 @@ export const QuizScreenView: React.FC<QuizScreenViewProps> = ({
                   optionGreek: option.greek,
                 })
               }
-              className={`flex min-h-[48px] w-full select-none items-center justify-between gap-3 rounded-2xl border px-3.5 py-2.5 text-left text-sm font-semibold leading-snug transition ${buttonStyle} ${animationClass}`}
+              className={`flex min-h-[44px] w-full select-none items-center justify-between gap-3 rounded-2xl border px-3.5 py-2 text-left text-sm font-semibold leading-snug transition ${buttonStyle} ${animationClass}`}
             >
               <span className="min-w-0 flex-1 break-words">
                 {state.directionGreekToRussian
@@ -142,38 +142,29 @@ export const QuizScreenView: React.FC<QuizScreenViewProps> = ({
         })}
       </div>
 
-      <div
-        aria-live="polite"
-        className="flex min-h-[176px] flex-col justify-center border-t border-slate-800/80 pt-2.5"
-      >
-        {hasAnswered ? (
-          <div className="animate-fade-up flex w-full flex-col items-center gap-2">
-            <CardIllustrationView item={targetItem} compact />
+      {hasAnswered && (
+        <div className="animate-fade-up flex w-full flex-col items-center gap-2 border-t border-slate-800/80 pt-2.5">
+          <CardIllustrationView item={targetItem} compact />
 
-            <button
-              type="button"
-              aria-label="Произнести греческий пример"
-              onClick={() => speakGreek(targetItem.example)}
-              className="inline-flex w-full items-center gap-2 rounded-xl border-l-[3px] border-sky-400 bg-[#0a131f]/85 px-3 py-2 text-left text-[12px] leading-snug text-slate-200 transition hover:text-white"
-            >
-              <VolumeOnIcon className="h-4 w-4 shrink-0 text-sky-400" />
-              <span className="select-text">{targetItem.example}</span>
-            </button>
+          <button
+            type="button"
+            aria-label="Произнести греческий пример"
+            onClick={() => speakGreek(targetItem.example)}
+            className="inline-flex w-full items-center gap-2 rounded-xl border-l-[3px] border-sky-400 bg-[#0a131f]/85 px-3 py-2 text-left text-[12px] leading-snug text-slate-200 transition hover:text-white"
+          >
+            <VolumeOnIcon className="h-4 w-4 shrink-0 text-sky-400" />
+            <span className="select-text">{targetItem.example}</span>
+          </button>
 
-            <button
-              type="button"
-              onClick={() => dispatch({ type: 'QUIZ_NEXT_QUESTION' })}
-              className="inline-flex min-h-[42px] w-full select-none items-center justify-center rounded-xl border border-sky-400/50 bg-sky-400/15 px-4 text-sm font-extrabold text-sky-300 transition hover:bg-sky-400/25 active:scale-[0.98]"
-            >
-              Дальше →
-            </button>
-          </div>
-        ) : (
-          <p className="px-4 text-center text-xs leading-relaxed text-slate-500">
-            Выберите ответ — после него появятся пример и ассоциация
-          </p>
-        )}
-      </div>
+          <button
+            type="button"
+            onClick={() => dispatch({ type: 'QUIZ_NEXT_QUESTION' })}
+            className="min-h-[44px] w-full rounded-xl bg-sky-500/20 border border-sky-400/60 text-sm font-extrabold text-sky-200 hover:bg-sky-500/30 active:scale-[0.98]"
+          >
+            Дальше →
+          </button>
+        </div>
+      )}
     </div>
   );
 };

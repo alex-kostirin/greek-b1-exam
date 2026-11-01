@@ -38,18 +38,6 @@
   }
 }
 
-@keyframes card-flip {
-  0% {
-    transform: perspective(1000px) rotateY(0deg) scale(1);
-  }
-  45% {
-    transform: perspective(1000px) rotateY(14deg) scale(0.97);
-  }
-  100% {
-    transform: perspective(1000px) rotateY(0deg) scale(1);
-  }
-}
-
 @layer utilities {
   .animate-shake {
     animation: shake 0.35s ease-in-out;
@@ -63,8 +51,21 @@
     animation: fade-up 0.18s ease-out both;
   }
 
-  .animate-card-flip {
-    animation: card-flip 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  .perspective-1200 {
+    perspective: 1200px;
+  }
+
+  .preserve-3d {
+    transform-style: preserve-3d;
+  }
+
+  .backface-hidden {
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+  }
+
+  .rotate-y-180 {
+    transform: rotateY(180deg);
   }
 
   .no-scrollbar::-webkit-scrollbar {
@@ -80,8 +81,7 @@
 @media (prefers-reduced-motion: reduce) {
   .animate-shake,
   .animate-pop,
-  .animate-fade-up,
-  .animate-card-flip {
+  .animate-fade-up {
     animation: none !important;
   }
 }

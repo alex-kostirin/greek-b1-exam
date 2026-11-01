@@ -23,6 +23,81 @@ export const CLICK_CHAPTER_LABELS: Record<number, string> = {
   12: 'Κεφ. 12: Επανάληψη 7-11',
 };
 
+const TOP_VERBS_MODULE = '11. Топ-Глаголы B1';
+
+const MODULE_CLICK_CHAPTERS: Record<string, readonly number[]> = {
+  '1. Характер': [1, 4],
+  '2. Жилье и переезд': [2, 4],
+  '3. Время и досуг': [3, 4],
+  '12. Связки и Штампы': [4, 12],
+  '13. Чтение №3 (Формы)': [4, 8, 12],
+  '4. Путешествия': [5, 8],
+  '5. Покупки и жалобы': [6, 8],
+  '6. Здоровье и ЗОЖ': [7, 8, 12],
+  '14. Ловушки Аудирования': [8, 12],
+  '7. Экология и Кипр': [9, 12],
+  '9. Технологии и СМИ': [10, 12],
+  '8. Работа и учеба': [11, 12],
+  '10. Город и службы': [11, 12],
+};
+
+const TOP_VERB_DISTRIBUTION_CHAPTERS = [1, 2, 3, 5, 6, 7, 9, 10, 11, 12] as const;
+
+function hashTextForChapterDistribution(text: string): number {
+  let hash = 2166136261;
+
+  for (let charIndex = 0; charIndex < text.length; charIndex += 1) {
+    hash ^= text.charCodeAt(charIndex);
+    hash = Math.imul(hash, 16777619);
+  }
+
+  return hash >>> 0;
+}
+
+function resolveTopVerbClickChapters(item: VocabularyItem, index?: number): number[] {
+  const hashSource = item.greek.length > 0 ? item.greek : String(index ?? 0);
+  const hash = hashTextForChapterDistribution(hashSource);
+  const distributionIndex = hash % TOP_VERB_DISTRIBUTION_CHAPTERS.length;
+  const primaryChapter = TOP_VERB_DISTRIBUTION_CHAPTERS[distributionIndex] ?? 12;
+  const chapters: number[] = [primaryChapter];
+
+  if (primaryChapter === 1 || primaryChapter === 2 || primaryChapter === 3) {
+    chapters.push(4);
+  }
+
+  if (primaryChapter === 5 || primaryChapter === 6 || primaryChapter === 7) {
+    chapters.push(8);
+  }
+
+  if (
+    primaryChapter === 7 ||
+    primaryChapter === 9 ||
+    primaryChapter === 10 ||
+    primaryChapter === 11
+  ) {
+    chapters.push(12);
+  }
+
+  return chapters;
+}
+
+export function resolveItemClickChapters(item: VocabularyItem, index?: number): number[] {
+  if (item.clickChapter !== undefined) {
+    return [item.clickChapter];
+  }
+
+  if (item.module === TOP_VERBS_MODULE) {
+    return resolveTopVerbClickChapters(item, index);
+  }
+
+  const mappedChapters = MODULE_CLICK_CHAPTERS[item.module];
+  return mappedChapters ? [...mappedChapters] : [];
+}
+
+export function matchesClickChapter(item: VocabularyItem, chapter: number): boolean {
+  return resolveItemClickChapters(item).includes(chapter);
+}
+
 export function normalizeGreekText(text: string): string {
   return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 }
@@ -69,27 +144,29 @@ export function selectCandidatePool(
   const allVocabulary = selectAllVocabulary(customWords);
 
   if (groupingMode === 'click' && activeClickChapter !== null) {
-    const chapterPool = allVocabulary.filter(
-      (item) => item.clickChapter === activeClickChapter
+    const chapterPool = allVocabulary.filter((item) =>
+      matchesClickChapter(item, activeClickChapter)
     );
+    const safeChapterPool = chapterPool.length > 0 ? chapterPool : allVocabulary;
 
     if (activeModule === SMART_MIX_MODULE) {
-      return chapterPool;
+      return safeChapterPool;
     }
 
     if (activeModule === REVIEW_HARD_MODULE) {
-      const learningOrHard = chapterPool.filter((item) =>
+      const learningOrHard = safeChapterPool.filter((item) =>
         srsService.isHardOrLearning(srsMap[item.greek])
       );
       if (learningOrHard.length > 0) return learningOrHard;
-      const unmastered = chapterPool.filter(
+
+      const unmastered = safeChapterPool.filter(
         (item) => !srsService.isMastered(srsMap[item.greek])
       );
-      return unmastered.length > 0 ? unmastered : chapterPool;
+      return unmastered.length > 0 ? unmastered : safeChapterPool;
     }
 
-    const moduleItems = chapterPool.filter((item) => item.module === activeModule);
-    return moduleItems.length > 0 ? moduleItems : chapterPool;
+    const moduleItems = safeChapterPool.filter((item) => item.module === activeModule);
+    return moduleItems.length > 0 ? moduleItems : safeChapterPool;
   }
 
   if (activeModule === REVIEW_HARD_MODULE) {
@@ -97,6 +174,7 @@ export function selectCandidatePool(
       srsService.isHardOrLearning(srsMap[item.greek])
     );
     if (learningOrHard.length > 0) return learningOrHard;
+
     const unmastered = allVocabulary.filter(
       (item) => !srsService.isMastered(srsMap[item.greek])
     );
@@ -119,12 +197,25 @@ export function selectVocabularyStats(state: AppState): {
   learningPercent: number;
 } {
   const allVocabulary = selectAllVocabulary(state.customWords);
+  let vocabularyForStats = allVocabulary;
+
+  if (state.groupingMode === 'click' && state.activeClickChapter !== null) {
+    const chapterVocabulary = allVocabulary.filter((item) =>
+      matchesClickChapter(item, state.activeClickChapter as number)
+    );
+
+    if (chapterVocabulary.length > 0) {
+      vocabularyForStats = chapterVocabulary;
+    }
+  }
+
   let masteredCount = 0;
   let learningCount = 0;
 
-  allVocabulary.forEach((item) => {
+  vocabularyForStats.forEach((item) => {
     const record = state.srsMap[item.greek];
     if (!record) return;
+
     if (record.box >= MASTERY_THRESHOLD) {
       masteredCount += 1;
     } else {
@@ -132,7 +223,7 @@ export function selectVocabularyStats(state: AppState): {
     }
   });
 
-  const totalCount = allVocabulary.length;
+  const totalCount = vocabularyForStats.length;
   return {
     masteredCount,
     learningCount,
@@ -148,7 +239,7 @@ export function selectFilteredDictionaryList(state: AppState): VocabularyItem[] 
 
   return allVocabulary.filter((item) => {
     if (state.groupingMode === 'click' && state.activeClickChapter !== null) {
-      if (item.clickChapter !== state.activeClickChapter) {
+      if (!matchesClickChapter(item, state.activeClickChapter)) {
         return false;
       }
     }
