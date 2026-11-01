@@ -98,7 +98,11 @@ export const HeaderView: React.FC<HeaderViewProps> = ({ state, dispatch }) => {
       <ModuleSelectorView
         activeModule={state.activeModule}
         customWords={state.customWords}
+        groupingMode={state.groupingMode}
+        activeClickChapter={state.activeClickChapter}
         onSelectModule={(module) => dispatch({ type: 'MODULE_SELECTED', module })}
+        onToggleGroupingMode={(mode) => dispatch({ type: 'GROUPING_MODE_TOGGLED', mode })}
+        onSelectClickChapter={(chapter) => dispatch({ type: 'CLICK_CHAPTER_SELECTED', chapter })}
       />
     </header>
   );

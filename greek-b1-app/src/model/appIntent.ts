@@ -1,4 +1,4 @@
-import { NavigationTab, VocabularyItem, WordSrsMap } from '../shared/types/vocabulary';
+import { GroupingMode, NavigationTab, VocabularyItem, WordSrsMap } from '../shared/types/vocabulary';
 import { ActiveModal } from './appState';
 
 export type AppIntent =
@@ -32,4 +32,6 @@ export type AppIntent =
       type: 'CLOUD_STATE_HYDRATED';
       srsMap: WordSrsMap;
       customWords: VocabularyItem[];
-    };
+    }
+  | { type: 'GROUPING_MODE_TOGGLED'; mode: GroupingMode }
+  | { type: 'CLICK_CHAPTER_SELECTED'; chapter: number | null };

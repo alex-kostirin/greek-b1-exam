@@ -1,6 +1,6 @@
 import { MatchBoardState } from '../features/match/model/matchGenerator';
 import { QuizQuestionState } from '../features/quiz/model/quizGenerator';
-import { NavigationTab, VocabularyItem, WordSrsMap } from '../shared/types/vocabulary';
+import { GroupingMode, NavigationTab, VocabularyItem, WordSrsMap } from '../shared/types/vocabulary';
 
 export type ActiveModal = 'none' | 'addWord' | 'backup' | 'confirmReset';
 
@@ -19,4 +19,6 @@ export interface AppState {
   quizQuestion: QuizQuestionState;
   matchBoard: MatchBoardState;
   activeModal: ActiveModal;
+  groupingMode: GroupingMode;
+  activeClickChapter: number | null;
 }

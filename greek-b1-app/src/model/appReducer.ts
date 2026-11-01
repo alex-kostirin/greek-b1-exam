@@ -16,7 +16,15 @@ export function createInitialAppState(
   initialSrsMap: WordSrsMap,
   initialCustomWords: VocabularyItem[]
 ): AppState {
-  const pool = selectCandidatePool(SMART_MIX_MODULE, initialSrsMap, initialCustomWords);
+  const groupingMode = 'exam';
+  const activeClickChapter = null;
+  const pool = selectCandidatePool(
+    SMART_MIX_MODULE,
+    initialSrsMap,
+    initialCustomWords,
+    groupingMode,
+    activeClickChapter
+  );
   const allVocab = selectAllVocabulary(initialCustomWords);
   const firstCard = srsService.pickNextSmartCard(pool, initialSrsMap, []);
 
@@ -35,13 +43,21 @@ export function createInitialAppState(
     quizQuestion: generateQuizQuestion(firstCard, allVocab),
     matchBoard: generateMatchBoard(pool),
     activeModal: 'none',
+    groupingMode,
+    activeClickChapter,
   };
 }
 
 export function appReducer(state: AppState, intent: AppIntent): AppState {
   switch (intent.type) {
     case 'TAB_SELECTED': {
-      const pool = selectCandidatePool(state.activeModule, state.srsMap, state.customWords);
+      const pool = selectCandidatePool(
+        state.activeModule,
+        state.srsMap,
+        state.customWords,
+        state.groupingMode,
+        state.activeClickChapter
+      );
       const allVocab = selectAllVocabulary(state.customWords);
       return {
         ...state,
@@ -60,7 +76,13 @@ export function appReducer(state: AppState, intent: AppIntent): AppState {
     }
 
     case 'MODULE_SELECTED': {
-      const pool = selectCandidatePool(intent.module, state.srsMap, state.customWords);
+      const pool = selectCandidatePool(
+        intent.module,
+        state.srsMap,
+        state.customWords,
+        state.groupingMode,
+        state.activeClickChapter
+      );
       const allVocab = selectAllVocabulary(state.customWords);
       const nextCard = srsService.pickNextSmartCard(
         pool,
@@ -113,7 +135,9 @@ export function appReducer(state: AppState, intent: AppIntent): AppState {
       const nextPool = selectCandidatePool(
         state.activeModule,
         updatedSrsMap,
-        state.customWords
+        state.customWords,
+        state.groupingMode,
+        state.activeClickChapter
       );
       const updatedRecent = [...state.recentGreeks.slice(-8), currentGreek];
       const nextCard = srsService.pickNextSmartCard(
@@ -161,7 +185,13 @@ export function appReducer(state: AppState, intent: AppIntent): AppState {
     }
 
     case 'QUIZ_NEXT_QUESTION': {
-      const pool = selectCandidatePool(state.activeModule, state.srsMap, state.customWords);
+      const pool = selectCandidatePool(
+        state.activeModule,
+        state.srsMap,
+        state.customWords,
+        state.groupingMode,
+        state.activeClickChapter
+      );
       const allVocab = selectAllVocabulary(state.customWords);
       const nextTarget = srsService.pickNextSmartCard(
         pool,
@@ -257,7 +287,13 @@ export function appReducer(state: AppState, intent: AppIntent): AppState {
       };
 
     case 'MATCH_NEW_ROUND': {
-      const pool = selectCandidatePool(state.activeModule, state.srsMap, state.customWords);
+      const pool = selectCandidatePool(
+        state.activeModule,
+        state.srsMap,
+        state.customWords,
+        state.groupingMode,
+        state.activeClickChapter
+      );
       const smartSample = Array.from({ length: 5 }, (_, idx) =>
         srsService.pickNextSmartCard(
           pool,
@@ -348,6 +384,56 @@ export function appReducer(state: AppState, intent: AppIntent): AppState {
         ...state,
         srsMap: mergedSrs,
         customWords: mergedCustom,
+      };
+    }
+
+    case 'GROUPING_MODE_TOGGLED': {
+      const newMode = intent.mode;
+      const newClickChapter = newMode === 'click' ? (state.activeClickChapter ?? 1) : null;
+      const newActiveModule = SMART_MIX_MODULE;
+      const pool = selectCandidatePool(
+        newActiveModule,
+        state.srsMap,
+        state.customWords,
+        newMode,
+        newClickChapter
+      );
+      const allVocab = selectAllVocabulary(state.customWords);
+      const nextCard = srsService.pickNextSmartCard(pool, state.srsMap, state.recentGreeks);
+      return {
+        ...state,
+        groupingMode: newMode,
+        activeClickChapter: newClickChapter,
+        activeModule: newActiveModule,
+        currentCard: nextCard,
+        recentGreeks: [...state.recentGreeks.slice(-8), nextCard.greek],
+        isCardRevealed: false,
+        quizQuestion: generateQuizQuestion(nextCard, allVocab),
+        matchBoard: generateMatchBoard(pool),
+      };
+    }
+
+    case 'CLICK_CHAPTER_SELECTED': {
+      const chapter = intent.chapter;
+      const newActiveModule = SMART_MIX_MODULE;
+      const pool = selectCandidatePool(
+        newActiveModule,
+        state.srsMap,
+        state.customWords,
+        'click',
+        chapter
+      );
+      const allVocab = selectAllVocabulary(state.customWords);
+      const nextCard = srsService.pickNextSmartCard(pool, state.srsMap, state.recentGreeks);
+      return {
+        ...state,
+        activeClickChapter: chapter,
+        activeModule: newActiveModule,
+        currentCard: nextCard,
+        recentGreeks: [...state.recentGreeks.slice(-8), nextCard.greek],
+        isCardRevealed: false,
+        quizQuestion: generateQuizQuestion(nextCard, allVocab),
+        matchBoard: generateMatchBoard(pool),
       };
     }
   }

@@ -15,6 +15,9 @@ export interface VocabularyItem {
   grammarHint: string;
   russian: string;
   example: string;
+  clickChapter?: number; // 1-12
 }
+
+export type GroupingMode = 'exam' | 'click';
 
 export type NavigationTab = 'swipe' | 'quiz' | 'match' | 'list';
