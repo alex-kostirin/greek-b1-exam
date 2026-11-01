@@ -1,7 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useReducer } from 'react';
 import { AppIntent } from '../../model/appIntent';
 import { appReducer, createInitialAppState } from '../../model/appReducer';
-import { selectAllVocabulary, selectCurrentCard } from '../../model/appSelectors';
+import { selectAllVocabulary } from '../../model/appSelectors';
 import { AppState } from '../../model/appState';
 import { BASE_VOCABULARY_DATASET } from '../../shared/data/vocabularyDataset';
 import { speechService } from '../../shared/services/speechService';
@@ -19,10 +19,10 @@ const AppStoreContext = createContext<AppStoreContextValue | null>(null);
 export const AppStoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [state, rawDispatch] = useReducer(
     appReducer,
-     undefined,
+    undefined,
     () =>
       createInitialAppState(
-        storageService.loadLocalStatusMap(),
+        storageService.loadLocalSrsMap(),
         storageService.loadLocalCustomWords()
       )
   );
@@ -32,7 +32,7 @@ export const AppStoreProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     storageService.fetchCloudState(BASE_VOCABULARY_DATASET, (cloudPayload) => {
       rawDispatch({
         type: 'CLOUD_STATE_HYDRATED',
-        statusMap: cloudPayload.statusMap,
+        srsMap: cloudPayload.srsMap,
         customWords: cloudPayload.customWords,
       });
     });
@@ -40,14 +40,13 @@ export const AppStoreProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   useEffect(() => {
     const allVocabulary = selectAllVocabulary(state.customWords);
-    storageService.persistState(state.statusMap, state.customWords, allVocabulary);
-  }, [state.statusMap, state.customWords]);
+    storageService.persistState(state.srsMap, state.customWords, allVocabulary);
+  }, [state.srsMap, state.customWords]);
 
   useEffect(() => {
     if (!state.autoTtsEnabled || !state.directionGreekToRussian) return;
     if (state.activeTab === 'swipe') {
-      const currentCard = selectCurrentCard(state);
-      speechService.speakGreek(currentCard.greek);
+      speechService.speakGreek(state.currentCard.greek);
     } else if (
       state.activeTab === 'quiz' &&
       state.quizQuestion.selectedOptionGreek === null
@@ -56,8 +55,7 @@ export const AppStoreProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   }, [
     state.activeTab,
-    state.activeModule,
-    state.cardCursor,
+    state.currentCard.greek,
     state.autoTtsEnabled,
     state.directionGreekToRussian,
     state.quizQuestion.targetItem.greek,

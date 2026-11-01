@@ -1,4 +1,4 @@
-import { NavigationTab, VocabularyItem, WordStatusMap } from '../shared/types/vocabulary';
+import { NavigationTab, VocabularyItem, WordSrsMap } from '../shared/types/vocabulary';
 import { ActiveModal } from './appState';
 
 export type AppIntent =
@@ -24,12 +24,12 @@ export type AppIntent =
     }
   | {
       type: 'BACKUP_RESTORED';
-      statusMap: WordStatusMap;
+      srsMap: WordSrsMap;
       customWords: VocabularyItem[];
     }
   | { type: 'PROGRESS_RESET_CONFIRMED' }
   | {
       type: 'CLOUD_STATE_HYDRATED';
-      statusMap: WordStatusMap;
+      srsMap: WordSrsMap;
       customWords: VocabularyItem[];
     };

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { AppIntent } from '../../../model/appIntent';
+import { PlusIcon } from '../../../shared/ui/Icons';
 
 interface AddWordModalViewProps {
   dispatch: (intent: AppIntent) => void;
@@ -27,8 +28,9 @@ export const AddWordModalView: React.FC<AddWordModalViewProps> = ({ dispatch }) 
         onSubmit={handleSubmit}
         className="w-full max-w-sm bg-[#151f32] border border-slate-700 rounded-3xl p-5 flex flex-col gap-3.5 shadow-2xl"
       >
-        <div className="text-base font-extrabold text-white">
-          ➕ Добавить свое слово
+        <div className="flex items-center gap-2 text-base font-extrabold text-white">
+          <PlusIcon className="w-5 h-5 text-sky-400 shrink-0" />
+          <span>Добавить свое слово</span>
         </div>
 
         <input

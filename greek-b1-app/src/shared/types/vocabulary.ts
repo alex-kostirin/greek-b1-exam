@@ -1,6 +1,13 @@
-export type WordLearningStatus = 'known' | 'hard';
+export const MASTERY_THRESHOLD = 4;
 
-export type WordStatusMap = Record<string, WordLearningStatus>;
+export interface WordSrsRecord {
+  box: number;
+  lapses: number;
+  nextReviewAt: number;
+  lastReviewedAt: number;
+}
+
+export type WordSrsMap = Record<string, WordSrsRecord>;
 
 export interface VocabularyItem {
   module: string;
@@ -10,4 +17,4 @@ export interface VocabularyItem {
   example: string;
 }
 
-export type NavigationTab = 'swipe' | 'quiz' | 'match' | 'templates' | 'list';
+export type NavigationTab = 'swipe' | 'quiz' | 'match' | 'list';

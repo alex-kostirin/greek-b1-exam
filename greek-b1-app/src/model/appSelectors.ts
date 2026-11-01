@@ -1,11 +1,12 @@
 import { BASE_VOCABULARY_DATASET } from '../shared/data/vocabularyDataset';
-import { VocabularyItem, WordStatusMap } from '../shared/types/vocabulary';
+import { srsService } from '../shared/services/srsService';
+import { MASTERY_THRESHOLD, VocabularyItem, WordSrsMap } from '../shared/types/vocabulary';
 import { AppState } from './appState';
 
-export const SMART_MIX_MODULE = '🔥 Умный микс';
-export const REVIEW_HARD_MODULE = '❗️ Повторить';
-export const ALL_WORDS_MODULE = 'Все подряд';
-export const CUSTOM_WORDS_MODULE = '⭐️ Мои слова';
+export const SMART_MIX_MODULE = 'Умный микс';
+export const REVIEW_HARD_MODULE = 'На повторе';
+export const ALL_WORDS_MODULE = 'Все слова';
+export const CUSTOM_WORDS_MODULE = 'Мои слова';
 
 export function selectAllVocabulary(customWords: VocabularyItem[]): VocabularyItem[] {
   return [...customWords, ...BASE_VOCABULARY_DATASET];
@@ -17,64 +18,60 @@ export function selectModuleList(customWords: VocabularyItem[]): string[] {
   return [SMART_MIX_MODULE, REVIEW_HARD_MODULE, ...dynamicModules, ALL_WORDS_MODULE];
 }
 
-export function selectActiveDeck(
+export function selectCandidatePool(
   activeModule: string,
-  statusMap: WordStatusMap,
+  srsMap: WordSrsMap,
   customWords: VocabularyItem[]
 ): VocabularyItem[] {
   const allVocabulary = selectAllVocabulary(customWords);
 
   if (activeModule === REVIEW_HARD_MODULE) {
-    const hardItems = allVocabulary.filter((item) => statusMap[item.greek] === 'hard');
-    if (hardItems.length > 0) return hardItems;
-    const unlearnedItems = allVocabulary.filter((item) => statusMap[item.greek] !== 'known');
-    return unlearnedItems.length > 0 ? unlearnedItems : allVocabulary;
+    const learningOrHard = allVocabulary.filter((item) =>
+      srsService.isHardOrLearning(srsMap[item.greek])
+    );
+    if (learningOrHard.length > 0) return learningOrHard;
+    const unmastered = allVocabulary.filter(
+      (item) => !srsService.isMastered(srsMap[item.greek])
+    );
+    return unmastered.length > 0 ? unmastered : allVocabulary;
   }
 
-  if (activeModule === SMART_MIX_MODULE) {
-    const hardItems = allVocabulary.filter((item) => statusMap[item.greek] === 'hard');
-    const freshItems = allVocabulary.filter((item) => !statusMap[item.greek]);
-    const knownItems = allVocabulary.filter((item) => statusMap[item.greek] === 'known');
-    return [...hardItems, ...freshItems, ...knownItems];
-  }
-
-  if (activeModule === ALL_WORDS_MODULE) {
+  if (activeModule === SMART_MIX_MODULE || activeModule === ALL_WORDS_MODULE) {
     return allVocabulary;
   }
 
-  const moduleFiltered = allVocabulary.filter((item) => item.module === activeModule);
-  return moduleFiltered.length > 0 ? moduleFiltered : allVocabulary;
-}
-
-export function selectCurrentCard(state: AppState): VocabularyItem {
-  const deck = selectActiveDeck(state.activeModule, state.statusMap, state.customWords);
-  return deck[state.cardCursor % deck.length];
+  const moduleItems = allVocabulary.filter((item) => item.module === activeModule);
+  return moduleItems.length > 0 ? moduleItems : allVocabulary;
 }
 
 export function selectVocabularyStats(state: AppState): {
-  knownCount: number;
-  hardCount: number;
+  masteredCount: number;
+  learningCount: number;
   totalCount: number;
-  knownPercent: number;
-  hardPercent: number;
+  masteredPercent: number;
+  learningPercent: number;
 } {
   const allVocabulary = selectAllVocabulary(state.customWords);
-  let knownCount = 0;
-  let hardCount = 0;
+  let masteredCount = 0;
+  let learningCount = 0;
 
   allVocabulary.forEach((item) => {
-    const status = state.statusMap[item.greek];
-    if (status === 'known') knownCount += 1;
-    else if (status === 'hard') hardCount += 1;
+    const record = state.srsMap[item.greek];
+    if (!record) return;
+    if (record.box >= MASTERY_THRESHOLD) {
+      masteredCount += 1;
+    } else {
+      learningCount += 1;
+    }
   });
 
   const totalCount = allVocabulary.length;
   return {
-    knownCount,
-    hardCount,
+    masteredCount,
+    learningCount,
     totalCount,
-    knownPercent: totalCount > 0 ? (knownCount / totalCount) * 100 : 0,
-    hardPercent: totalCount > 0 ? (hardCount / totalCount) * 100 : 0,
+    masteredPercent: totalCount > 0 ? (masteredCount / totalCount) * 100 : 0,
+    learningPercent: totalCount > 0 ? (learningCount / totalCount) * 100 : 0,
   };
 }
 
@@ -88,7 +85,7 @@ export function selectFilteredDictionaryList(state: AppState): VocabularyItem[] 
         return true;
       }
       if (state.activeModule === REVIEW_HARD_MODULE) {
-        return state.statusMap[item.greek] === 'hard';
+        return srsService.isHardOrLearning(state.srsMap[item.greek]);
       }
       return item.module === state.activeModule;
     }

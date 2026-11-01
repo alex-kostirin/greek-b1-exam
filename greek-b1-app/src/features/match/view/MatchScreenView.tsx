@@ -1,6 +1,7 @@
 import React from 'react';
 import { AppIntent } from '../../../model/appIntent';
 import { AppState } from '../../../model/appState';
+import { RefreshIcon } from '../../../shared/ui/Icons';
 
 interface MatchScreenViewProps {
   state: AppState;
@@ -18,17 +19,18 @@ export const MatchScreenView: React.FC<MatchScreenViewProps> = ({ state, dispatc
   } = state.matchBoard;
 
   return (
-    <div className="w-full my-auto flex flex-col gap-2.5">
+    <div className="w-full my-auto flex flex-col gap-3">
       <div className="flex items-center justify-between text-xs text-slate-400 px-1">
         <span>
-          Соедини 5 пар одним пальцем ({matchedGreeks.length}/{leftColumn.length})
+          Соедини пары ({matchedGreeks.length}/{leftColumn.length})
         </span>
         <button
           type="button"
           onClick={() => dispatch({ type: 'MATCH_NEW_ROUND' })}
-          className="text-sky-400 font-semibold underline"
+          className="inline-flex items-center gap-1.5 text-sky-400 font-semibold leading-none active:scale-95 transition"
         >
-          Обновить пары
+          <RefreshIcon className="w-3.5 h-3.5 shrink-0" />
+          <span>Новые пары</span>
         </button>
       </div>
 
@@ -41,7 +43,8 @@ export const MatchScreenView: React.FC<MatchScreenViewProps> = ({ state, dispatc
 
             let tileClass = 'bg-[#151f32] border-slate-700 text-slate-100';
             if (isMatched) {
-              tileClass = 'opacity-20 pointer-events-none border-green-500 bg-green-500/10';
+              tileClass =
+                'opacity-20 pointer-events-none border-emerald-500 bg-emerald-500/10';
             } else if (isError) {
               tileClass = 'border-rose-500 bg-rose-500/25 text-white';
             } else if (isSelected) {
@@ -76,7 +79,8 @@ export const MatchScreenView: React.FC<MatchScreenViewProps> = ({ state, dispatc
 
             let tileClass = 'bg-[#151f32] border-slate-700 text-slate-100';
             if (isMatched) {
-              tileClass = 'opacity-20 pointer-events-none border-green-500 bg-green-500/10';
+              tileClass =
+                'opacity-20 pointer-events-none border-emerald-500 bg-emerald-500/10';
             } else if (isError) {
               tileClass = 'border-rose-500 bg-rose-500/25 text-white';
             } else if (isSelected) {

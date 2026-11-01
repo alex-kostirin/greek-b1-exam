@@ -6,7 +6,6 @@ import { DictionaryScreenView } from '../features/dictionary/view/DictionaryScre
 import { MatchScreenView } from '../features/match/view/MatchScreenView';
 import { QuizScreenView } from '../features/quiz/view/QuizScreenView';
 import { SwipeScreenView } from '../features/swipe/view/SwipeScreenView';
-import { TemplatesScreenView } from '../features/templates/view/TemplatesScreenView';
 import { BottomNavigationView } from '../shared/ui/BottomNavigationView';
 import { HeaderView } from '../shared/ui/HeaderView';
 import { useAppStore } from './providers/AppStoreProvider';
@@ -18,7 +17,7 @@ export const App: React.FC = () => {
     <div className="h-dvh w-full flex flex-col bg-[#0b1120] text-slate-50 overflow-hidden select-none">
       <HeaderView state={state} dispatch={dispatch} />
 
-      <main className="flex-1 flex flex-col justify-center px-3.5 py-3 relative overflow-y-auto overflow-x-hidden min-h-0">
+      <main className="flex-1 flex flex-col justify-center px-3.5 py-2.5 relative overflow-y-auto overflow-x-hidden min-h-0">
         {state.activeTab === 'swipe' && (
           <SwipeScreenView state={state} dispatch={dispatch} speakGreek={speakGreek} />
         )}
@@ -27,9 +26,6 @@ export const App: React.FC = () => {
         )}
         {state.activeTab === 'match' && (
           <MatchScreenView state={state} dispatch={dispatch} />
-        )}
-        {state.activeTab === 'templates' && (
-          <TemplatesScreenView speakGreek={speakGreek} />
         )}
         {state.activeTab === 'list' && (
           <DictionaryScreenView

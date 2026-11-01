@@ -10,7 +10,7 @@ interface BackupModalViewProps {
 
 export const BackupModalView: React.FC<BackupModalViewProps> = ({ state, dispatch }) => {
   const currentCode = storageService.encodeBackupCode(
-    state.statusMap,
+    state.srsMap,
     state.customWords
   );
   const [inputCode, setInputCode] = useState(currentCode);
@@ -34,7 +34,7 @@ export const BackupModalView: React.FC<BackupModalViewProps> = ({ state, dispatc
     }
     dispatch({
       type: 'BACKUP_RESTORED',
-      statusMap: decoded.statusMap,
+      srsMap: decoded.srsMap,
       customWords: decoded.customWords,
     });
   };
@@ -43,10 +43,10 @@ export const BackupModalView: React.FC<BackupModalViewProps> = ({ state, dispatc
     <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50">
       <div className="w-full max-w-sm bg-[#151f32] border border-slate-700 rounded-3xl p-5 flex flex-col gap-3 shadow-2xl">
         <div className="text-base font-extrabold text-white">
-          💾 Бэкап и перенос прогресса
+          Бэкап и перенос прогресса
         </div>
         <div className="text-xs text-slate-400 leading-relaxed">
-          Скопируй этот код для сохранения или вставь ранее сохраненный код, чтобы восстановить выученные слова:
+          Скопируй этот код для сохранения или вставь ранее сохраненный код, чтобы восстановить прогресс:
         </div>
 
         <textarea
@@ -67,7 +67,7 @@ export const BackupModalView: React.FC<BackupModalViewProps> = ({ state, dispatc
             onClick={handleCopy}
             className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-slate-800 border border-slate-700 text-sky-400"
           >
-            {copied ? '✅ Скопировано' : '📋 Скопировать код'}
+            {copied ? 'Скопировано!' : 'Скопировать код'}
           </button>
           <button
             type="button"

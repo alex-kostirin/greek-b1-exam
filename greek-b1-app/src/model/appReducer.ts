@@ -1,21 +1,24 @@
 import { generateMatchBoard } from '../features/match/model/matchGenerator';
 import { generateQuizQuestion } from '../features/quiz/model/quizGenerator';
-import { VocabularyItem } from '../shared/types/vocabulary';
+import { srsService } from '../shared/services/srsService';
+import { storageService } from '../shared/services/storageService';
+import { VocabularyItem, WordSrsMap } from '../shared/types/vocabulary';
 import { AppIntent } from './appIntent';
 import {
   CUSTOM_WORDS_MODULE,
   SMART_MIX_MODULE,
-  selectActiveDeck,
   selectAllVocabulary,
+  selectCandidatePool,
 } from './appSelectors';
 import { AppState } from './appState';
 
 export function createInitialAppState(
-  initialStatusMap: AppState['statusMap'],
+  initialSrsMap: WordSrsMap,
   initialCustomWords: VocabularyItem[]
 ): AppState {
-  const initialDeck = selectActiveDeck(SMART_MIX_MODULE, initialStatusMap, initialCustomWords);
+  const pool = selectCandidatePool(SMART_MIX_MODULE, initialSrsMap, initialCustomWords);
   const allVocab = selectAllVocabulary(initialCustomWords);
+  const firstCard = srsService.pickNextSmartCard(pool, initialSrsMap, []);
 
   return {
     activeTab: 'swipe',
@@ -24,12 +27,13 @@ export function createInitialAppState(
     autoTtsEnabled: false,
     isCardRevealed: false,
     streakCount: 0,
-    cardCursor: 0,
+    currentCard: firstCard,
+    recentGreeks: [firstCard.greek],
     searchQuery: '',
-    statusMap: initialStatusMap,
+    srsMap: initialSrsMap,
     customWords: initialCustomWords,
-    quizQuestion: generateQuizQuestion(initialDeck[0], allVocab),
-    matchBoard: generateMatchBoard(initialDeck),
+    quizQuestion: generateQuizQuestion(firstCard, allVocab),
+    matchBoard: generateMatchBoard(pool),
     activeModal: 'none',
   };
 }
@@ -37,35 +41,40 @@ export function createInitialAppState(
 export function appReducer(state: AppState, intent: AppIntent): AppState {
   switch (intent.type) {
     case 'TAB_SELECTED': {
-      const deck = selectActiveDeck(state.activeModule, state.statusMap, state.customWords);
+      const pool = selectCandidatePool(state.activeModule, state.srsMap, state.customWords);
       const allVocab = selectAllVocabulary(state.customWords);
-      const targetItem = deck[state.cardCursor % deck.length];
       return {
         ...state,
         activeTab: intent.tab,
         isCardRevealed: false,
         quizQuestion:
           intent.tab === 'quiz'
-            ? generateQuizQuestion(targetItem, allVocab)
+            ? generateQuizQuestion(state.currentCard, allVocab)
             : state.quizQuestion,
         matchBoard:
           intent.tab === 'match' &&
           state.matchBoard.matchedGreeks.length === state.matchBoard.leftColumn.length
-            ? generateMatchBoard(deck)
+            ? generateMatchBoard(pool)
             : state.matchBoard,
       };
     }
 
     case 'MODULE_SELECTED': {
-      const deck = selectActiveDeck(intent.module, state.statusMap, state.customWords);
+      const pool = selectCandidatePool(intent.module, state.srsMap, state.customWords);
       const allVocab = selectAllVocabulary(state.customWords);
+      const nextCard = srsService.pickNextSmartCard(
+        pool,
+        state.srsMap,
+        state.recentGreeks
+      );
       return {
         ...state,
         activeModule: intent.module,
-        cardCursor: 0,
+        currentCard: nextCard,
+        recentGreeks: [...state.recentGreeks.slice(-8), nextCard.greek],
         isCardRevealed: false,
-        quizQuestion: generateQuizQuestion(deck[0], allVocab),
-        matchBoard: generateMatchBoard(deck),
+        quizQuestion: generateQuizQuestion(nextCard, allVocab),
+        matchBoard: generateMatchBoard(pool),
       };
     }
 
@@ -89,21 +98,38 @@ export function appReducer(state: AppState, intent: AppIntent): AppState {
       };
 
     case 'CARD_GRADED': {
-      const currentDeck = selectActiveDeck(state.activeModule, state.statusMap, state.customWords);
-      const currentItem = currentDeck[state.cardCursor % currentDeck.length];
-      const updatedStatusMap = {
-        ...state.statusMap,
-        [currentItem.greek]: intent.isKnown ? ('known' as const) : ('hard' as const),
+      const now = Date.now();
+      const currentGreek = state.currentCard.greek;
+      const updatedRecord = srsService.gradeWord(
+        state.srsMap[currentGreek],
+        intent.isKnown,
+        now
+      );
+      const updatedSrsMap: WordSrsMap = {
+        ...state.srsMap,
+        [currentGreek]: updatedRecord,
       };
-      const nextDeck = selectActiveDeck(state.activeModule, updatedStatusMap, state.customWords);
-      const nextCursor = (state.cardCursor + 1) % nextDeck.length;
+
+      const nextPool = selectCandidatePool(
+        state.activeModule,
+        updatedSrsMap,
+        state.customWords
+      );
+      const updatedRecent = [...state.recentGreeks.slice(-8), currentGreek];
+      const nextCard = srsService.pickNextSmartCard(
+        nextPool,
+        updatedSrsMap,
+        updatedRecent,
+        now
+      );
 
       return {
         ...state,
-        statusMap: updatedStatusMap,
+        srsMap: updatedSrsMap,
         streakCount: intent.isKnown ? state.streakCount + 1 : 0,
         isCardRevealed: false,
-        cardCursor: nextCursor,
+        currentCard: nextCard,
+        recentGreeks: [...updatedRecent.slice(-8), nextCard.greek],
       };
     }
 
@@ -111,16 +137,21 @@ export function appReducer(state: AppState, intent: AppIntent): AppState {
       if (state.quizQuestion.selectedOptionGreek !== null) {
         return state;
       }
+      const now = Date.now();
       const targetGreek = state.quizQuestion.targetItem.greek;
       const isCorrect = intent.optionGreek === targetGreek;
-      const updatedStatusMap = {
-        ...state.statusMap,
-        [targetGreek]: isCorrect ? ('known' as const) : ('hard' as const),
-      };
+      const updatedRecord = srsService.gradeWord(
+        state.srsMap[targetGreek],
+        isCorrect,
+        now
+      );
 
       return {
         ...state,
-        statusMap: updatedStatusMap,
+        srsMap: {
+          ...state.srsMap,
+          [targetGreek]: updatedRecord,
+        },
         streakCount: isCorrect ? state.streakCount + 1 : 0,
         quizQuestion: {
           ...state.quizQuestion,
@@ -130,14 +161,18 @@ export function appReducer(state: AppState, intent: AppIntent): AppState {
     }
 
     case 'QUIZ_NEXT_QUESTION': {
-      const deck = selectActiveDeck(state.activeModule, state.statusMap, state.customWords);
+      const pool = selectCandidatePool(state.activeModule, state.srsMap, state.customWords);
       const allVocab = selectAllVocabulary(state.customWords);
-      const nextCursor = (state.cardCursor + 1) % deck.length;
-      const nextTarget = deck[nextCursor];
+      const nextTarget = srsService.pickNextSmartCard(
+        pool,
+        state.srsMap,
+        state.recentGreeks
+      );
 
       return {
         ...state,
-        cardCursor: nextCursor,
+        currentCard: nextTarget,
+        recentGreeks: [...state.recentGreeks.slice(-8), nextTarget.greek],
         quizQuestion: generateQuizQuestion(nextTarget, allVocab),
       };
     }
@@ -163,16 +198,17 @@ export function appReducer(state: AppState, intent: AppIntent): AppState {
           : board.selectedRightGreek;
 
       if (nextLeft && nextRight) {
+        const now = Date.now();
         if (nextLeft === nextRight) {
           const updatedMatched = [...board.matchedGreeks, nextLeft];
-          const updatedStatusMap = {
-            ...state.statusMap,
-            [nextLeft]: 'known' as const,
-          };
+          const updatedRecord = srsService.gradeWord(state.srsMap[nextLeft], true, now);
 
           return {
             ...state,
-            statusMap: updatedStatusMap,
+            srsMap: {
+              ...state.srsMap,
+              [nextLeft]: updatedRecord,
+            },
             streakCount: state.streakCount + 1,
             matchBoard: {
               ...board,
@@ -184,8 +220,13 @@ export function appReducer(state: AppState, intent: AppIntent): AppState {
           };
         }
 
+        const penalizedLeft = srsService.gradeWord(state.srsMap[nextLeft], false, now);
         return {
           ...state,
+          srsMap: {
+            ...state.srsMap,
+            [nextLeft]: penalizedLeft,
+          },
           streakCount: 0,
           matchBoard: {
             ...board,
@@ -216,10 +257,22 @@ export function appReducer(state: AppState, intent: AppIntent): AppState {
       };
 
     case 'MATCH_NEW_ROUND': {
-      const deck = selectActiveDeck(state.activeModule, state.statusMap, state.customWords);
+      const pool = selectCandidatePool(state.activeModule, state.srsMap, state.customWords);
+      const smartSample = Array.from({ length: 5 }, (_, idx) =>
+        srsService.pickNextSmartCard(
+          pool,
+          state.srsMap,
+          state.recentGreeks.concat(idx.toString())
+        )
+      );
+      const uniqueSample = Array.from(
+        new Map(smartSample.map((item) => [item.greek, item])).values()
+      );
+      const deckForMatch = uniqueSample.length >= 4 ? uniqueSample : pool;
+
       return {
         ...state,
-        matchBoard: generateMatchBoard(deck),
+        matchBoard: generateMatchBoard(deckForMatch),
       };
     }
 
@@ -256,12 +309,13 @@ export function appReducer(state: AppState, intent: AppIntent): AppState {
       return {
         ...state,
         customWords: updatedCustomWords,
+        currentCard: newWord,
         activeModal: 'none',
       };
     }
 
     case 'BACKUP_RESTORED': {
-      const mergedStatus = { ...state.statusMap, ...intent.statusMap };
+      const mergedSrs = storageService.mergeSrsMaps(state.srsMap, intent.srsMap);
       const existingGreeks = new Set(state.customWords.map((item) => item.greek));
       const mergedCustom = [
         ...state.customWords,
@@ -269,7 +323,7 @@ export function appReducer(state: AppState, intent: AppIntent): AppState {
       ];
       return {
         ...state,
-        statusMap: mergedStatus,
+        srsMap: mergedSrs,
         customWords: mergedCustom,
         activeModal: 'none',
       };
@@ -278,13 +332,13 @@ export function appReducer(state: AppState, intent: AppIntent): AppState {
     case 'PROGRESS_RESET_CONFIRMED':
       return {
         ...state,
-        statusMap: {},
+        srsMap: {},
         streakCount: 0,
         activeModal: 'none',
       };
 
     case 'CLOUD_STATE_HYDRATED': {
-      const mergedStatus = { ...state.statusMap, ...intent.statusMap };
+      const mergedSrs = storageService.mergeSrsMaps(state.srsMap, intent.srsMap);
       const existingGreeks = new Set(state.customWords.map((item) => item.greek));
       const mergedCustom = [
         ...state.customWords,
@@ -292,7 +346,7 @@ export function appReducer(state: AppState, intent: AppIntent): AppState {
       ];
       return {
         ...state,
-        statusMap: mergedStatus,
+        srsMap: mergedSrs,
         customWords: mergedCustom,
       };
     }
