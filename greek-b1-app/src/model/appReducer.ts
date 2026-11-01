@@ -11,7 +11,7 @@ import {
   selectAllVocabulary,
   selectCandidatePool,
 } from './appSelectors';
-import { AppState } from './appState';
+import { AppState, LastGradedCardSnapshot } from './appState';
 
 export function createInitialAppState(
   initialSrsMap: WordSrsMap,
@@ -48,6 +48,7 @@ export function createInitialAppState(
     groupingMode,
     activeClickChapter,
     essayProgress: initialEssayProgress,
+    lastGradedCardSnapshot: null,
   };
 }
 
@@ -66,6 +67,7 @@ export function appReducer(state: AppState, intent: AppIntent): AppState {
         ...state,
         activeTab: intent.tab,
         isCardRevealed: false,
+        lastGradedCardSnapshot: null,
         quizQuestion:
           intent.tab === 'quiz'
             ? generateQuizQuestion(state.currentCard, allVocab)
@@ -98,6 +100,7 @@ export function appReducer(state: AppState, intent: AppIntent): AppState {
         currentCard: nextCard,
         recentGreeks: [...state.recentGreeks.slice(-8), nextCard.greek],
         isCardRevealed: false,
+        lastGradedCardSnapshot: null,
         quizQuestion: generateQuizQuestion(nextCard, allVocab),
         matchBoard: generateMatchBoard(pool),
       };
@@ -135,6 +138,13 @@ export function appReducer(state: AppState, intent: AppIntent): AppState {
         [currentGreek]: updatedRecord,
       };
 
+      const snapshot: LastGradedCardSnapshot = {
+        card: state.currentCard,
+        previousRecord: state.srsMap[currentGreek],
+        previousStreakCount: state.streakCount,
+        wasKnown: intent.isKnown,
+      };
+
       const nextPool = selectCandidatePool(
         state.activeModule,
         updatedSrsMap,
@@ -157,6 +167,29 @@ export function appReducer(state: AppState, intent: AppIntent): AppState {
         isCardRevealed: false,
         currentCard: nextCard,
         recentGreeks: [...updatedRecent.slice(-8), nextCard.greek],
+        lastGradedCardSnapshot: snapshot,
+      };
+    }
+
+    case 'UNDO_LAST_CARD_GRADE': {
+      if (!state.lastGradedCardSnapshot) return state;
+
+      const { card, previousRecord, previousStreakCount } = state.lastGradedCardSnapshot;
+      const updatedSrsMap = { ...state.srsMap };
+
+      if (previousRecord) {
+        updatedSrsMap[card.greek] = previousRecord;
+      } else {
+        delete updatedSrsMap[card.greek];
+      }
+
+      return {
+        ...state,
+        currentCard: card,
+        streakCount: previousStreakCount,
+        isCardRevealed: false,
+        srsMap: updatedSrsMap,
+        lastGradedCardSnapshot: null,
       };
     }
 
@@ -379,6 +412,7 @@ export function appReducer(state: AppState, intent: AppIntent): AppState {
         srsMap: {},
         streakCount: 0,
         essayProgress: { pinnedIds: [], completedIds: [], hintLevels: {} },
+        lastGradedCardSnapshot: null,
         activeModal: 'none',
       };
 
@@ -422,6 +456,7 @@ export function appReducer(state: AppState, intent: AppIntent): AppState {
         currentCard: nextCard,
         recentGreeks: [...state.recentGreeks.slice(-8), nextCard.greek],
         isCardRevealed: false,
+        lastGradedCardSnapshot: null,
         quizQuestion: generateQuizQuestion(nextCard, allVocab),
         matchBoard: generateMatchBoard(pool),
       };
@@ -446,6 +481,7 @@ export function appReducer(state: AppState, intent: AppIntent): AppState {
         currentCard: nextCard,
         recentGreeks: [...state.recentGreeks.slice(-8), nextCard.greek],
         isCardRevealed: false,
+        lastGradedCardSnapshot: null,
         quizQuestion: generateQuizQuestion(nextCard, allVocab),
         matchBoard: generateMatchBoard(pool),
       };

@@ -23,6 +23,32 @@ export const CLICK_CHAPTER_LABELS: Record<number, string> = {
   12: 'Κεφ. 12: Επανάληψη 7-11',
 };
 
+export function normalizeGreekText(text: string): string {
+  return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+}
+
+export function splitGreekArticle(greekText: string): {
+  article: 'ο' | 'η' | 'το' | 'οι' | 'τα' | null;
+  word: string;
+  extra: string | null;
+} {
+  const match = greekText.match(/^(ο|η|το|οι|τα)\s+(.+?)(\s*\(.+\))?$/i);
+  if (!match) {
+    const parenMatch = greekText.match(/^(.+?)(\s*\(.+\))$/);
+    return {
+      article: null,
+      word: parenMatch ? parenMatch[1].trim() : greekText.trim(),
+      extra: parenMatch ? parenMatch[2].trim() : null,
+    };
+  }
+
+  return {
+    article: match[1].toLowerCase() as 'ο' | 'η' | 'το' | 'οι' | 'τα',
+    word: match[2].trim(),
+    extra: match[3] ? match[3].trim() : null,
+  };
+}
+
 export function selectAllVocabulary(customWords: VocabularyItem[]): VocabularyItem[] {
   return [...customWords, ...BASE_VOCABULARY_DATASET];
 }
@@ -42,7 +68,6 @@ export function selectCandidatePool(
 ): VocabularyItem[] {
   const allVocabulary = selectAllVocabulary(customWords);
 
-  // If in click mode and a chapter is selected, base pool is filtered by chapter
   if (groupingMode === 'click' && activeClickChapter !== null) {
     const chapterPool = allVocabulary.filter(
       (item) => item.clickChapter === activeClickChapter
@@ -63,12 +88,10 @@ export function selectCandidatePool(
       return unmastered.length > 0 ? unmastered : chapterPool;
     }
 
-    // For any other module (e.g., specific module name), filter within chapter
     const moduleItems = chapterPool.filter((item) => item.module === activeModule);
     return moduleItems.length > 0 ? moduleItems : chapterPool;
   }
 
-  // Original exam mode behavior
   if (activeModule === REVIEW_HARD_MODULE) {
     const learningOrHard = allVocabulary.filter((item) =>
       srsService.isHardOrLearning(srsMap[item.greek])
@@ -121,10 +144,9 @@ export function selectVocabularyStats(state: AppState): {
 
 export function selectFilteredDictionaryList(state: AppState): VocabularyItem[] {
   const allVocabulary = selectAllVocabulary(state.customWords);
-  const query = state.searchQuery.trim().toLowerCase();
+  const query = normalizeGreekText(state.searchQuery.trim());
 
   return allVocabulary.filter((item) => {
-    // Apply chapter filter if in click mode with a chapter selected
     if (state.groupingMode === 'click' && state.activeClickChapter !== null) {
       if (item.clickChapter !== state.activeClickChapter) {
         return false;
@@ -142,9 +164,10 @@ export function selectFilteredDictionaryList(state: AppState): VocabularyItem[] 
     }
 
     return (
-      item.greek.toLowerCase().includes(query) ||
+      normalizeGreekText(item.greek).includes(query) ||
       item.russian.toLowerCase().includes(query) ||
-      item.example.toLowerCase().includes(query)
+      normalizeGreekText(item.example).includes(query) ||
+      normalizeGreekText(item.grammarHint || '').includes(query)
     );
   });
 }

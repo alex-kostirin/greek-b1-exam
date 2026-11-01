@@ -13,35 +13,55 @@ import { useAppStore } from './providers/AppStoreProvider';
 
 export const App: React.FC = () => {
   const { state, dispatch, speakGreek } = useAppStore();
+  const isCenteredTab =
+    state.activeTab === 'swipe' ||
+    state.activeTab === 'quiz' ||
+    state.activeTab === 'match';
 
   return (
-    <div className="h-dvh w-full flex flex-col bg-[#0b1120] text-slate-50 overflow-hidden select-none">
+    <div className="h-dvh w-full flex flex-col overflow-hidden bg-[#0a131f] text-slate-50">
       <HeaderView state={state} dispatch={dispatch} />
 
-      <main
-        className={`flex-1 flex flex-col ${
-          state.activeTab === 'essays' ? 'justify-start' : 'justify-center'
-        } px-3.5 py-2.5 relative overflow-y-auto overflow-x-hidden min-h-0`}
-      >
-        {state.activeTab === 'swipe' && (
-          <SwipeScreenView state={state} dispatch={dispatch} speakGreek={speakGreek} />
-        )}
-        {state.activeTab === 'quiz' && (
-          <QuizScreenView state={state} dispatch={dispatch} speakGreek={speakGreek} />
-        )}
-        {state.activeTab === 'match' && (
-          <MatchScreenView state={state} dispatch={dispatch} />
-        )}
-        {state.activeTab === 'list' && (
-          <DictionaryScreenView
-            state={state}
-            dispatch={dispatch}
-            speakGreek={speakGreek}
-          />
-        )}
-        {state.activeTab === 'essays' && (
-          <EssaysScreenView state={state} dispatch={dispatch} speakGreek={speakGreek} />
-        )}
+      <main className="relative min-h-0 w-full flex-1 overflow-y-auto overflow-x-hidden">
+        <div
+          className={
+            isCenteredTab
+              ? 'max-w-lg mx-auto w-full h-full flex flex-col justify-center px-3.5 py-2.5'
+              : 'max-w-3xl mx-auto w-full px-3.5 py-3'
+          }
+        >
+          {state.activeTab === 'swipe' && (
+            <SwipeScreenView
+              state={state}
+              dispatch={dispatch}
+              speakGreek={speakGreek}
+            />
+          )}
+          {state.activeTab === 'quiz' && (
+            <QuizScreenView
+              state={state}
+              dispatch={dispatch}
+              speakGreek={speakGreek}
+            />
+          )}
+          {state.activeTab === 'match' && (
+            <MatchScreenView state={state} dispatch={dispatch} />
+          )}
+          {state.activeTab === 'list' && (
+            <DictionaryScreenView
+              state={state}
+              dispatch={dispatch}
+              speakGreek={speakGreek}
+            />
+          )}
+          {state.activeTab === 'essays' && (
+            <EssaysScreenView
+              state={state}
+              dispatch={dispatch}
+              speakGreek={speakGreek}
+            />
+          )}
+        </div>
       </main>
 
       <BottomNavigationView

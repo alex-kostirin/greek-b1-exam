@@ -1,5 +1,6 @@
 import React from 'react';
 import { AppIntent } from '../../../model/appIntent';
+import { splitGreekArticle } from '../../../model/appSelectors';
 import { AppState } from '../../../model/appState';
 import { srsService } from '../../../shared/services/srsService';
 import { MASTERY_THRESHOLD } from '../../../shared/types/vocabulary';
@@ -17,6 +18,62 @@ interface SwipeScreenViewProps {
   speakGreek: (text: string) => void;
 }
 
+type GreekArticle = 'ο' | 'η' | 'το' | 'οι' | 'τα';
+
+const getArticleBadgeClass = (article: GreekArticle): string => {
+  if (article === 'ο' || article === 'οι') {
+    return 'border-sky-400/40 bg-sky-500/20 text-sky-300';
+  }
+  if (article === 'η') {
+    return 'border-pink-400/40 bg-pink-500/20 text-pink-300';
+  }
+  return 'border-amber-400/40 bg-amber-500/20 text-amber-300';
+};
+
+interface GreekWordViewProps {
+  greek: string;
+  variant: 'prompt' | 'answer';
+}
+
+const GreekWordView: React.FC<GreekWordViewProps> = ({ greek, variant }) => {
+  const { article, word, extra } = splitGreekArticle(greek);
+  const isPrompt = variant === 'prompt';
+
+  return (
+    <div className="flex max-w-full select-text flex-col items-center">
+      <div className="flex max-w-full flex-wrap items-center justify-center gap-x-2 gap-y-1.5">
+        {article && (
+          <span
+            className={`inline-flex shrink-0 items-center rounded-lg border px-2 py-1 font-extrabold leading-none ${getArticleBadgeClass(
+              article,
+            )} ${isPrompt ? 'text-base sm:text-lg' : 'text-sm'}`}
+          >
+            {article}
+          </span>
+        )}
+        <span
+          className={`max-w-full break-words font-extrabold leading-tight ${
+            isPrompt
+              ? 'text-3xl text-white sm:text-4xl'
+              : 'text-xl text-teal-300 sm:text-2xl'
+          }`}
+        >
+          {word}
+        </span>
+      </div>
+      {extra && (
+        <div
+          className={`mt-1.5 max-w-full break-words font-medium leading-snug text-slate-400 ${
+            isPrompt ? 'text-xs sm:text-sm' : 'text-[11px]'
+          }`}
+        >
+          {extra}
+        </div>
+      )}
+    </div>
+  );
+};
+
 export const SwipeScreenView: React.FC<SwipeScreenViewProps> = ({
   state,
   dispatch,
@@ -26,18 +83,37 @@ export const SwipeScreenView: React.FC<SwipeScreenViewProps> = ({
   const srsRecord = state.srsMap[currentCard.greek];
   const currentBox = srsRecord?.box ?? 0;
   const intervalLabel = srsService.formatNextIntervalLabel(srsRecord);
-
-  const { offsetX, isDragging, onTouchStart, onTouchMove, onTouchEnd } =
-    useSwipeGesture((isKnown) => dispatch({ type: 'CARD_GRADED', isKnown }));
-
-  const promptText = state.directionGreekToRussian
-    ? currentCard.greek
-    : currentCard.russian;
-  const answerText = state.directionGreekToRussian
-    ? currentCard.russian
-    : currentCard.greek;
   const showPronunciationButton =
     state.directionGreekToRussian || state.isCardRevealed;
+
+  const {
+    offsetX,
+    isDragging,
+    swipeProgress,
+    triggerSwipe,
+    consumeTapAllowed,
+    onTouchStart,
+    onTouchMove,
+    onTouchEnd,
+    onMouseDown,
+    onMouseMove,
+    onMouseUp,
+    onMouseLeave,
+  } = useSwipeGesture((isKnown) => dispatch({ type: 'CARD_GRADED', isKnown }));
+
+  const stampOpacity = Math.min(1, Math.abs(swipeProgress));
+  const srsStatusLabel =
+    currentBox >= MASTERY_THRESHOLD
+      ? 'Выучено ★'
+      : currentBox > 0
+      ? `В процессе · ${currentBox}/${MASTERY_THRESHOLD}`
+      : 'Новое';
+  const srsStatusClass =
+    currentBox >= MASTERY_THRESHOLD
+      ? 'border-emerald-400/30 bg-emerald-500/15 text-emerald-300'
+      : currentBox > 0
+      ? 'border-amber-400/30 bg-amber-500/15 text-amber-300'
+      : 'border-slate-700/80 bg-slate-900/70 text-slate-400';
 
   const borderColorClass =
     offsetX > 45
@@ -47,121 +123,177 @@ export const SwipeScreenView: React.FC<SwipeScreenViewProps> = ({
       : 'border-slate-700/80';
 
   return (
-    <div className="flex flex-col h-full justify-between gap-3">
-      <div className="flex-1 flex items-center justify-center min-h-0">
+    <div className="flex h-full min-h-0 flex-col justify-between gap-2.5">
+      <div className="flex min-h-0 flex-1 items-center justify-center">
         <div
-          onClick={() => dispatch({ type: 'SWIPE_CARD_FLIPPED' })}
+          role="button"
+          tabIndex={0}
+          aria-label={
+            state.isCardRevealed
+              ? 'Карточка слова. Проведите влево или вправо для оценки.'
+              : 'Показать перевод и ассоциацию'
+          }
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault();
+              dispatch({ type: 'SWIPE_CARD_FLIPPED' });
+            }
+          }}
+          onClick={() => {
+            if (!consumeTapAllowed()) return;
+            dispatch({ type: 'SWIPE_CARD_FLIPPED' });
+          }}
           onTouchStart={onTouchStart}
           onTouchMove={onTouchMove}
           onTouchEnd={onTouchEnd}
+          onMouseDown={onMouseDown}
+          onMouseMove={onMouseMove}
+          onMouseUp={onMouseUp}
+          onMouseLeave={onMouseLeave}
           style={{
             transform: `translateX(${offsetX}px) rotate(${offsetX * 0.035}deg)`,
             transition: isDragging
               ? 'none'
               : 'transform 0.2s ease, border-color 0.2s ease',
           }}
-          className={`w-full h-full max-h-[470px] bg-gradient-to-b from-[#182338] to-[#111927] border ${borderColorClass} rounded-3xl p-4 flex flex-col justify-between items-center text-center shadow-2xl cursor-pointer touch-pan-y`}
+          className={`relative flex h-full max-h-[500px] w-full cursor-pointer touch-pan-y select-none flex-col items-center rounded-3xl border ${borderColorClass} bg-gradient-to-b from-[#182338] to-[#101927] p-3.5 text-center shadow-2xl will-change-transform sm:p-4`}
         >
-          <div className="w-full flex items-start justify-between gap-2">
-            <span className="h-6 px-2.5 rounded-full text-[11px] font-semibold uppercase tracking-wider text-sky-400 bg-sky-400/15 inline-flex items-center leading-none">
-              {currentCard.module}
-            </span>
+          {offsetX > 15 && (
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute left-4 top-4 z-30 -rotate-6 rounded-xl border-2 border-emerald-300 bg-emerald-950/90 px-3 py-1.5 text-sm font-black tracking-widest text-emerald-300 shadow-[0_0_24px_rgba(16,185,129,0.5)]"
+              style={{ opacity: stampOpacity }}
+            >
+              ЗНАЮ ✓
+            </div>
+          )}
 
-            <div className="flex flex-col items-end gap-1.5">
-              <div className="flex items-center gap-2">
-                <div
-                  aria-label={`Прогресс изучения: ${currentBox} из ${MASTERY_THRESHOLD}`}
-                  className="flex items-center gap-1 bg-slate-900/80 border border-slate-700/80 px-2.5 py-2 rounded-full"
-                >
-                  {Array.from({ length: MASTERY_THRESHOLD }).map((_, idx) => (
-                    <span
-                      key={idx}
-                      className={`w-2 h-2 rounded-full transition-colors ${
-                        idx < currentBox ? 'bg-emerald-400' : 'bg-slate-700'
-                      }`}
-                    />
-                  ))}
-                </div>
+          {offsetX < -15 && (
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute right-4 top-4 z-30 rotate-6 rounded-xl border-2 border-rose-300 bg-rose-950/90 px-3 py-1.5 text-sm font-black tracking-widest text-rose-300 shadow-[0_0_24px_rgba(244,63,94,0.5)]"
+              style={{ opacity: stampOpacity }}
+            >
+              ПОВТОРИТЬ ↺
+            </div>
+          )}
 
-                {showPronunciationButton && (
-                  <button
-                    type="button"
-                    aria-label="Произнести греческое слово"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      speakGreek(currentCard.greek);
-                    }}
-                    className="w-8 h-8 rounded-full bg-sky-400/15 border border-sky-400/30 text-sky-400 flex items-center justify-center active:scale-90 transition shrink-0"
-                  >
-                    <VolumeOnIcon className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
-
-              <span className="text-[10px] font-medium text-slate-500 leading-none">
-                {intervalLabel}
+          <div className="flex w-full shrink-0 items-start justify-between gap-2">
+            <div className="flex min-w-0 flex-col items-start gap-1.5">
+              <span className="inline-flex h-6 max-w-full select-none items-center truncate rounded-full bg-sky-400/15 px-2.5 text-[10px] font-semibold uppercase leading-none tracking-wider text-sky-400">
+                {currentCard.module}
               </span>
+              <div className="flex max-w-full items-center gap-1.5">
+                <span
+                  className={`inline-flex h-5 shrink-0 items-center rounded-full border px-2 text-[10px] font-bold leading-none ${srsStatusClass}`}
+                >
+                  {srsStatusLabel}
+                </span>
+                <span
+                  className="truncate text-[10px] font-medium leading-none text-slate-500"
+                  title={intervalLabel}
+                >
+                  {intervalLabel}
+                </span>
+              </div>
             </div>
+
+            {showPronunciationButton ? (
+              <button
+                type="button"
+                aria-label="Произнести греческое слово"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  speakGreek(currentCard.greek);
+                }}
+                className="flex h-10 w-10 shrink-0 select-none items-center justify-center rounded-full border border-sky-400/30 bg-sky-400/15 text-sky-400 transition active:scale-90"
+              >
+                <VolumeOnIcon className="h-5 w-5" />
+              </button>
+            ) : (
+              <span aria-hidden="true" className="h-10 w-10 shrink-0" />
+            )}
           </div>
 
-          <div className="my-auto flex flex-col items-center max-w-full px-1 py-3">
-            <div className="text-3xl sm:text-4xl font-extrabold leading-tight text-white break-words">
-              {promptText}
-            </div>
+          <div className="flex min-h-[104px] w-full flex-1 items-center justify-center px-1 py-2.5">
+            {state.directionGreekToRussian ? (
+              <GreekWordView greek={currentCard.greek} variant="prompt" />
+            ) : (
+              <div className="max-w-full select-text break-words text-3xl font-extrabold leading-tight text-white sm:text-4xl">
+                {currentCard.russian}
+              </div>
+            )}
           </div>
 
-          <div className="w-full min-h-[104px] flex flex-col justify-center items-center gap-2.5">
+          <div className="flex h-[175px] min-h-[175px] w-full shrink-0 flex-col items-center justify-center">
             {state.isCardRevealed ? (
-              <>
+              <div className="animate-fade-up flex w-full flex-col items-center gap-1.5">
+                {state.directionGreekToRussian ? (
+                  <div className="max-w-full select-text break-words text-xl font-bold leading-snug text-teal-300">
+                    {currentCard.russian}
+                  </div>
+                ) : (
+                  <GreekWordView greek={currentCard.greek} variant="answer" />
+                )}
+
+                {currentCard.grammarHint && (
+                  <div className="rounded-lg bg-amber-500/15 px-2.5 py-0.5 text-[11px] font-semibold leading-relaxed text-amber-400">
+                    {currentCard.grammarHint}
+                  </div>
+                )}
+
                 <CardIllustrationView item={currentCard} compact />
 
-                <div className="text-lg font-bold text-teal-400 leading-snug break-words">
-                  {answerText}
-                </div>
-
-                <div className="text-xs font-semibold text-amber-400 bg-amber-500/15 px-2.5 py-0.5 rounded-lg">
-                  {currentCard.grammarHint}
-                </div>
-
-                <div
+                <button
+                  type="button"
+                  aria-label="Произнести греческий пример"
                   onClick={(event) => {
                     event.stopPropagation();
                     speakGreek(currentCard.example);
                   }}
-                  className="w-full text-left text-[13px] text-slate-200 bg-[#0b1120]/80 border-l-[3px] border-sky-400 px-3 py-2 rounded-xl leading-snug flex items-center gap-2"
+                  className="flex w-full items-center gap-2 rounded-xl border-l-[3px] border-sky-400 bg-[#0a131f]/85 px-3 py-2 text-left text-[12px] leading-snug text-slate-200 transition hover:text-white"
                 >
-                  <VolumeOnIcon className="w-4 h-4 text-sky-400 shrink-0" />
-                  <span>{currentCard.example}</span>
-                </div>
-              </>
+                  <VolumeOnIcon className="h-4 w-4 shrink-0 text-sky-400" />
+                  <span className="select-text">{currentCard.example}</span>
+                </button>
+              </div>
             ) : (
               <div className="inline-flex items-center justify-center rounded-full border border-slate-700/70 bg-slate-900/45 px-4 py-2 text-[11px] font-medium text-slate-400">
-                Тапни для перевода и ассоциации
+                Показать перевод и ассоциацию 👆
               </div>
             )}
           </div>
         </div>
       </div>
 
-      <div className="flex gap-2.5 pt-0.5 shrink-0">
+      <div className="flex shrink-0 items-stretch gap-2 pt-0.5">
         <button
           type="button"
-          onClick={() => dispatch({ type: 'CARD_GRADED', isKnown: false })}
-          className="flex-1 h-12 px-3 rounded-2xl text-sm font-extrabold bg-rose-500/15 text-rose-300 border border-rose-500/40 inline-flex items-center justify-center gap-2 leading-none active:scale-95 transition"
+          onClick={() => triggerSwipe(false)}
+          className="inline-flex h-12 min-w-0 flex-1 select-none items-center justify-center gap-2 rounded-2xl border border-rose-500/40 bg-rose-500/15 px-3 text-sm font-extrabold leading-none text-rose-300 transition active:scale-95"
         >
-          <ArrowLeftIcon className="w-4 h-4 shrink-0" />
-          <span>Не помню</span>
+          <ArrowLeftIcon className="h-4 w-4 shrink-0" />
+          <span>Повторить</span>
         </button>
+
+        {state.lastGradedCardSnapshot !== null && (
+          <button
+            type="button"
+            aria-label="Отменить последнюю оценку карточки"
+            onClick={() => dispatch({ type: 'UNDO_LAST_CARD_GRADE' })}
+            className="inline-flex h-12 shrink-0 select-none items-center justify-center rounded-2xl border border-slate-700 bg-slate-900/90 px-3 text-xs font-bold leading-none text-slate-300 transition hover:border-slate-500 hover:text-white active:scale-95"
+          >
+            ↶ Отменить
+          </button>
+        )}
+
         <button
           type="button"
-          onClick={() => dispatch({ type: 'CARD_GRADED', isKnown: true })}
-          className="flex-1 h-12 px-3 rounded-2xl text-sm font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/45 inline-flex items-center justify-center gap-2 leading-none active:scale-95 transition"
+          onClick={() => triggerSwipe(true)}
+          className="inline-flex h-12 min-w-0 flex-1 select-none items-center justify-center gap-2 rounded-2xl border border-emerald-500/45 bg-emerald-500/20 px-3 text-sm font-extrabold leading-none text-emerald-300 transition active:scale-95"
         >
-          <span>
-            Знаю ({Math.min(MASTERY_THRESHOLD, currentBox + 1)}/
-            {MASTERY_THRESHOLD})
-          </span>
-          <ArrowRightIcon className="w-4 h-4 shrink-0" />
+          <span>Знаю</span>
+          <ArrowRightIcon className="h-4 w-4 shrink-0" />
         </button>
       </div>
     </div>

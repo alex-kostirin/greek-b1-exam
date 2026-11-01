@@ -1,9 +1,16 @@
 import { MatchBoardState } from '../features/match/model/matchGenerator';
 import { QuizQuestionState } from '../features/quiz/model/quizGenerator';
-import { GroupingMode, NavigationTab, VocabularyItem, WordSrsMap } from '../shared/types/vocabulary';
+import { GroupingMode, NavigationTab, VocabularyItem, WordSrsMap, WordSrsRecord } from '../shared/types/vocabulary';
 import { EssayUserProgress } from '../shared/types/essay';
 
 export type ActiveModal = 'none' | 'addWord' | 'backup' | 'confirmReset';
+
+export interface LastGradedCardSnapshot {
+  card: VocabularyItem;
+  previousRecord: WordSrsRecord | undefined;
+  previousStreakCount: number;
+  wasKnown: boolean;
+}
 
 export interface AppState {
   activeTab: NavigationTab;
@@ -23,4 +30,5 @@ export interface AppState {
   groupingMode: GroupingMode;
   activeClickChapter: number | null;
   essayProgress: EssayUserProgress;
+  lastGradedCardSnapshot: LastGradedCardSnapshot | null;
 }

@@ -41,4 +41,5 @@ export type AppIntent =
   | { type: 'ESSAY_PIN_TOGGLED'; topicId: string }
   | { type: 'ESSAY_COMPLETED_TOGGLED'; topicId: string }
   | { type: 'ESSAY_HINT_STEP_ADVANCED'; topicId: string }
-  | { type: 'ESSAY_HINT_LEVEL_SET'; topicId: string; level: number };
+  | { type: 'ESSAY_HINT_LEVEL_SET'; topicId: string; level: number }
+  | { type: 'UNDO_LAST_CARD_GRADE' };

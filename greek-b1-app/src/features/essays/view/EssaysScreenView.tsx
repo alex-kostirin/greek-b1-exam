@@ -1,10 +1,11 @@
 import React, { useMemo, useState } from 'react';
 import { AppIntent } from '../../../model/appIntent';
+import { normalizeGreekText } from '../../../model/appSelectors';
 import { AppState } from '../../../model/appState';
 import { ESSAY_UNIVERSAL_TEMPLATES } from '../../../shared/data/essayDataset';
 import { ALL_ESSAY_TOPICS } from '../../../shared/data/keg2015To2018Essays';
 import { EssayHintPortion, EssayTopic } from '../../../shared/types/essay';
-import { LightbulbIcon, PinIcon, VolumeOnIcon } from '../../../shared/ui/Icons';
+import { LightbulbIcon, PinIcon, SearchIcon, VolumeOnIcon } from '../../../shared/ui/Icons';
 
 interface EssaysScreenViewProps {
   state: AppState;
@@ -20,6 +21,8 @@ type EssaySourceFilter =
   | 'keg_2015_2018'
   | 'textbooks'
   | 'completed';
+
+type DraftCopyStatus = 'idle' | 'copied' | 'error';
 
 const SUB_TABS: { id: EssaySubTab; label: string }[] = [
   { id: 'informal', label: '1. Неофиц. (100–120)' },
@@ -43,6 +46,55 @@ const HINT_BUTTON_STYLES = [
   'border-emerald-400/60 bg-emerald-400/15 text-emerald-200 hover:bg-emerald-400/25',
 ] as const;
 
+const HINT_STEPS = [
+  {
+    level: 1,
+    label: '1. Шаблон',
+    activeClass: 'border-amber-400/60 bg-amber-400/15 text-amber-200',
+  },
+  {
+    level: 2,
+    label: '2. База',
+    activeClass: 'border-sky-400/60 bg-sky-400/15 text-sky-200',
+  },
+  {
+    level: 3,
+    label: '3. Коллокации',
+    activeClass: 'border-violet-400/60 bg-violet-400/15 text-violet-200',
+  },
+  {
+    level: 4,
+    label: '4. Связки',
+    activeClass: 'border-emerald-400/60 bg-emerald-400/15 text-emerald-200',
+  },
+] as const;
+
+const normalizeEssaySearchText = (text: string): string =>
+  normalizeGreekText(text).toLocaleLowerCase();
+
+const countGreekEssayWords = (text: string): number => {
+  const trimmedText = text.trim();
+  if (!trimmedText) return 0;
+
+  return trimmedText
+    .split(/\s+/)
+    .filter((token) => /[A-Za-z\u0370-\u03ff\u1f00-\u1fff]/i.test(token)).length;
+};
+
+const getEssayWordRange = (topic: EssayTopic): { min: number; max: number } => {
+  const rangeMatch = topic.wordRange.match(/(\d+)\s*[–—-]\s*(\d+)/);
+
+  if (rangeMatch) {
+    const min = Number(rangeMatch[1]);
+    const max = Number(rangeMatch[2]);
+    if (Number.isFinite(min) && Number.isFinite(max) && min > 0 && max >= min) {
+      return { min, max };
+    }
+  }
+
+  return topic.register === 'formal' ? { min: 150, max: 180 } : { min: 100, max: 120 };
+};
+
 interface SpeakGreekButtonProps {
   text: string;
   speakGreek: (text: string) => void;
@@ -52,11 +104,11 @@ const SpeakGreekButton: React.FC<SpeakGreekButtonProps> = ({ text, speakGreek })
   <button
     type="button"
     onClick={() => speakGreek(text)}
-    className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-sky-400/30 bg-sky-400/10 text-sky-300 transition hover:bg-sky-400/20 active:scale-95"
+    className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-sky-400/30 bg-sky-400/10 text-sky-300 transition hover:bg-sky-400/20 active:scale-95"
     aria-label={`Озвучить греческий текст: ${text}`}
     title="Озвучить греческий текст"
   >
-    <VolumeOnIcon className="h-3.5 w-3.5" />
+    <VolumeOnIcon className="h-4 w-4" />
   </button>
 );
 
@@ -176,12 +228,68 @@ const EssayTopicCard: React.FC<EssayTopicCardProps> = ({
   speakGreek,
 }) => {
   const [isPromptExpanded, setIsPromptExpanded] = useState(false);
+  const [checkedBulletIndexes, setCheckedBulletIndexes] = useState<Set<number>>(
+    () => new Set<number>(),
+  );
+  const [isDraftOpen, setIsDraftOpen] = useState(false);
+  const [draftText, setDraftText] = useState('');
+  const [draftCopyStatus, setDraftCopyStatus] = useState<DraftCopyStatus>('idle');
+
   const hintLevel = Math.max(0, Math.min(4, storedHintLevel));
   const promptDetailsId = `essay-prompt-details-${topic.id}`;
+  const draftPanelId = `essay-draft-${topic.id}`;
+
+  const checklistTotal = topic.bulletChecklist.length;
+  const checklistCompleted = checkedBulletIndexes.size;
+  const checklistProgress =
+    checklistTotal > 0 ? Math.min(100, (checklistCompleted / checklistTotal) * 100) : 0;
+
+  const { min: targetMinWords, max: targetMaxWords } = getEssayWordRange(topic);
+  const draftWordCount = countGreekEssayWords(draftText);
+  const isWithinWordRange =
+    draftWordCount >= targetMinWords && draftWordCount <= targetMaxWords;
+  const overageAllowance = Math.max(20, Math.round(targetMaxWords * 0.2));
+  const isWayOverWordRange = draftWordCount > targetMaxWords + overageAllowance;
+  const draftProgress = Math.min(100, (draftWordCount / targetMaxWords) * 100);
+
+  const wordCounterClass = isWithinWordRange
+    ? 'border-emerald-400/35 bg-emerald-400/10 text-emerald-300'
+    : isWayOverWordRange
+      ? 'border-rose-400/40 bg-rose-400/10 text-rose-300'
+      : 'border-amber-400/35 bg-amber-400/10 text-amber-300';
+
+  const wordProgressClass = isWithinWordRange
+    ? 'bg-emerald-400'
+    : isWayOverWordRange
+      ? 'bg-rose-400'
+      : 'bg-amber-400';
+
+  const toggleChecklistItem = (index: number) => {
+    setCheckedBulletIndexes((currentIndexes) => {
+      const nextIndexes = new Set(currentIndexes);
+      if (nextIndexes.has(index)) {
+        nextIndexes.delete(index);
+      } else {
+        nextIndexes.add(index);
+      }
+      return nextIndexes;
+    });
+  };
+
+  const handleCopyDraft = async () => {
+    if (!draftText.trim()) return;
+
+    try {
+      await navigator.clipboard.writeText(draftText);
+      setDraftCopyStatus('copied');
+    } catch {
+      setDraftCopyStatus('error');
+    }
+  };
 
   return (
     <article
-      className={`space-y-2.5 rounded-2xl border p-3 shadow-sm transition ${
+      className={`space-y-3 rounded-2xl border p-3 shadow-sm transition ${
         isPinned
           ? 'border-amber-400/40 bg-amber-400/[0.045]'
           : 'border-slate-700/70 bg-slate-800/45'
@@ -201,28 +309,28 @@ const EssayTopicCard: React.FC<EssayTopicCardProps> = ({
           <button
             type="button"
             onClick={() => dispatch({ type: 'ESSAY_PIN_TOGGLED', topicId: topic.id })}
-            className={`inline-flex min-h-7 items-center justify-center gap-1 rounded-lg border px-2 py-1 text-[10px] font-bold leading-none transition active:scale-95 ${
+            className={`inline-flex min-h-8 items-center justify-center gap-1 rounded-lg border px-2.5 py-1 text-xs font-bold leading-none transition active:scale-95 ${
               isPinned
                 ? 'border-amber-400/70 bg-amber-400/20 text-amber-300'
                 : 'border-slate-600 bg-slate-900/70 text-slate-300 hover:border-amber-400/40 hover:text-amber-300'
             }`}
             aria-pressed={isPinned}
           >
-            <PinIcon className="h-3 w-3 shrink-0" />
-            <span>{isPinned ? '📌 Закреплено' : 'Закрепить'}</span>
+            <PinIcon className="h-3.5 w-3.5 shrink-0" />
+            <span>{isPinned ? 'Закреплено' : 'Закрепить'}</span>
           </button>
 
           <button
             type="button"
             onClick={() => dispatch({ type: 'ESSAY_COMPLETED_TOGGLED', topicId: topic.id })}
-            className={`inline-flex min-h-7 items-center justify-center rounded-lg border px-2 py-1 text-[10px] font-bold leading-none transition active:scale-95 ${
+            className={`inline-flex min-h-8 items-center justify-center rounded-lg border px-2.5 py-1 text-xs font-bold leading-none transition active:scale-95 ${
               isCompleted
                 ? 'border-emerald-400/70 bg-emerald-400/20 text-emerald-300'
                 : 'border-slate-600 bg-slate-900/70 text-slate-300 hover:border-emerald-400/40 hover:text-emerald-300'
             }`}
             aria-pressed={isCompleted}
           >
-            {isCompleted ? '✅ Написано' : 'Отметить'}
+            {isCompleted ? '✓ Написано' : 'Отметить'}
           </button>
         </div>
       </div>
@@ -240,51 +348,173 @@ const EssayTopicCard: React.FC<EssayTopicCardProps> = ({
         <button
           type="button"
           onClick={() => setIsPromptExpanded((currentValue) => !currentValue)}
-          className="mt-2 inline-flex items-center gap-1.5 text-[11px] font-bold text-sky-300 transition hover:text-sky-200"
+          className="mt-2 inline-flex min-h-8 items-center gap-1.5 text-xs font-bold text-sky-300 transition hover:text-sky-200"
           aria-expanded={isPromptExpanded}
           aria-controls={promptDetailsId}
         >
-          <span>
-            {isPromptExpanded
-              ? 'Скрыть перевод задания и чек-лист'
-              : 'Показать перевод задания и чек-лист'}
-          </span>
+          <span>{isPromptExpanded ? 'Скрыть перевод задания' : 'Показать перевод задания'}</span>
           <span aria-hidden="true">{isPromptExpanded ? '▲' : '▼'}</span>
         </button>
 
         {isPromptExpanded && (
-          <div
-            id={promptDetailsId}
-            className="mt-2.5 space-y-2.5 border-t border-slate-700/70 pt-2.5"
-          >
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">
-                Перевод задания
-              </p>
-              <p className="mt-1 whitespace-pre-line text-xs leading-relaxed text-slate-300">
-                {topic.promptRussian}
-              </p>
-            </div>
-
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">
-                Обязательные пункты
-              </p>
-              <ul className="mt-1.5 space-y-1.5">
-                {topic.bulletChecklist.map((checklistItem, index) => (
-                  <li
-                    key={`${checklistItem}-${index}`}
-                    className="flex items-start gap-1.5 text-xs leading-relaxed text-slate-300"
-                  >
-                    <span className="mt-0.5 shrink-0 font-bold text-emerald-400">✓</span>
-                    <span>{checklistItem}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
+          <div id={promptDetailsId} className="mt-2 border-t border-slate-700/70 pt-2.5">
+            <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">
+              Перевод задания
+            </p>
+            <p className="mt-1 whitespace-pre-line text-xs leading-relaxed text-slate-300">
+              {topic.promptRussian}
+            </p>
           </div>
         )}
       </div>
+
+      <section className="rounded-xl border border-emerald-400/20 bg-emerald-400/[0.035] p-2.5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h4 className="text-xs font-extrabold text-emerald-300">Обязательные пункты</h4>
+            <p className="mt-0.5 text-[11px] font-semibold tabular-nums text-slate-400">
+              {checklistCompleted}/{checklistTotal} пунктов выполнено
+            </p>
+          </div>
+          {checklistCompleted > 0 && (
+            <button
+              type="button"
+              onClick={() => setCheckedBulletIndexes(new Set<number>())}
+              className="min-h-8 rounded-lg px-2 text-[11px] font-semibold text-slate-500 transition hover:bg-slate-800 hover:text-slate-300"
+            >
+              Очистить отметки
+            </button>
+          )}
+        </div>
+
+        <div className="mt-2 h-1 overflow-hidden rounded-full bg-slate-800">
+          <div
+            className="h-full rounded-full bg-emerald-400 transition-all duration-300"
+            style={{ width: `${checklistProgress}%` }}
+          />
+        </div>
+
+        <ul className="mt-2 space-y-1.5">
+          {topic.bulletChecklist.map((checklistItem, index) => {
+            const isChecked = checkedBulletIndexes.has(index);
+
+            return (
+              <li key={`${checklistItem}-${index}`}>
+                <label
+                  className={`flex min-h-9 cursor-pointer items-start gap-2.5 rounded-lg border p-2 text-xs leading-relaxed transition ${
+                    isChecked
+                      ? 'border-emerald-400/25 bg-emerald-400/[0.07] text-slate-400'
+                      : 'border-slate-700/50 bg-slate-950/35 text-slate-300 hover:border-slate-600'
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={isChecked}
+                    onChange={() => toggleChecklistItem(index)}
+                    className="mt-0.5 h-5 w-5 shrink-0 cursor-pointer accent-emerald-400"
+                  />
+                  <span className={isChecked ? 'line-through decoration-emerald-400/50' : ''}>
+                    {checklistItem}
+                  </span>
+                </label>
+              </li>
+            );
+          })}
+        </ul>
+
+        {checklistTotal > 0 && checklistCompleted === checklistTotal && (
+          <p className="mt-2 text-[11px] font-bold text-emerald-400" role="status">
+            ✓ Все обязательные требования отмечены. Теперь проверь объём и связность текста.
+          </p>
+        )}
+      </section>
+
+      <section className="rounded-xl border border-slate-700/60 bg-slate-950/25 p-2.5">
+        <button
+          type="button"
+          onClick={() => setIsDraftOpen((currentValue) => !currentValue)}
+          className={`inline-flex min-h-9 w-full items-center justify-center rounded-xl border px-3 text-xs font-extrabold transition active:scale-[0.99] ${
+            isDraftOpen
+              ? 'border-cyan-400/45 bg-cyan-400/15 text-cyan-200'
+              : 'border-slate-600 bg-slate-900/70 text-slate-300 hover:border-cyan-400/35 hover:text-cyan-200'
+          }`}
+          aria-expanded={isDraftOpen}
+          aria-controls={draftPanelId}
+        >
+          {isDraftOpen ? 'Скрыть черновик ▲' : '✍️ Написать черновик'}
+        </button>
+
+        {isDraftOpen && (
+          <div id={draftPanelId} className="mt-2.5 space-y-2.5 border-t border-slate-700/60 pt-2.5">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h4 className="text-xs font-extrabold text-cyan-300">
+                ✍️ Черновик с подсчётом слов
+              </h4>
+              <span
+                className={`rounded-lg border px-2 py-1 text-[11px] font-extrabold tabular-nums ${wordCounterClass}`}
+                aria-live="polite"
+              >
+                Слов: {draftWordCount} / норма: {targetMinWords}–{targetMaxWords}
+              </span>
+            </div>
+
+            <div className="h-1.5 overflow-hidden rounded-full bg-slate-800">
+              <div
+                className={`h-full rounded-full transition-all duration-300 ${wordProgressClass}`}
+                style={{ width: `${draftProgress}%` }}
+              />
+            </div>
+
+            <label htmlFor={`${draftPanelId}-textarea`} className="block text-[11px] font-bold text-slate-400">
+              Текст на греческом
+            </label>
+            <textarea
+              id={`${draftPanelId}-textarea`}
+              lang="el"
+              rows={8}
+              value={draftText}
+              onChange={(event) => {
+                setDraftText(event.target.value);
+                setDraftCopyStatus('idle');
+              }}
+              placeholder="Πληκτρολόγησε ή επικόλλησε εδώ το κείμενό σου..."
+              className="min-h-[180px] w-full resize-y rounded-xl border border-slate-700 bg-[#0b1120] p-3 text-sm leading-relaxed text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-cyan-400"
+            />
+
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={handleCopyDraft}
+                disabled={!draftText.trim()}
+                className="min-h-9 rounded-xl border border-cyan-400/35 bg-cyan-400/10 px-3 text-xs font-bold text-cyan-300 transition hover:bg-cyan-400/20 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {draftCopyStatus === 'copied' ? '✓ Скопировано' : '📋 Копировать черновик'}
+              </button>
+              <p className="flex-1 text-right text-[10px] leading-relaxed text-slate-500">
+                Черновик не сохраняется после перезагрузки страницы.
+              </p>
+            </div>
+
+            <div aria-live="polite">
+              {draftCopyStatus === 'error' && (
+                <p className="text-[11px] text-rose-400">
+                  Не удалось скопировать автоматически. Выдели текст в поле вручную.
+                </p>
+              )}
+              {isWithinWordRange && (
+                <p className="text-[11px] font-semibold text-emerald-400">
+                  Объём соответствует экзаменационной норме.
+                </p>
+              )}
+              {isWayOverWordRange && (
+                <p className="text-[11px] font-semibold text-rose-400">
+                  Текст заметно длиннее нормы — сократи повторы и второстепенные детали.
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+      </section>
 
       <div className="space-y-2.5 rounded-xl border border-slate-700/60 bg-slate-950/25 p-2.5">
         <div className="flex items-stretch gap-1.5">
@@ -303,31 +533,52 @@ const EssayTopicCard: React.FC<EssayTopicCardProps> = ({
               onClick={() =>
                 dispatch({ type: 'ESSAY_HINT_LEVEL_SET', topicId: topic.id, level: 0 })
               }
-              className="shrink-0 rounded-xl border border-slate-600 bg-slate-900/70 px-2.5 text-[10px] font-bold text-slate-400 transition hover:border-slate-500 hover:text-slate-200"
+              className="min-h-10 shrink-0 rounded-xl border border-slate-600 bg-slate-900/70 px-3 text-xs font-bold text-slate-400 transition hover:border-slate-500 hover:text-slate-200"
             >
               Скрыть
             </button>
           )}
         </div>
 
-        <div className="flex items-center gap-2" aria-label={`Открыто шагов: ${hintLevel} из 4`}>
-          <div className="flex flex-1 gap-1">
-            {[1, 2, 3, 4].map((step) => (
-              <span
-                key={step}
-                className={`h-1.5 flex-1 rounded-full transition-colors ${
-                  step <= hintLevel
-                    ? hintLevel === 4
-                      ? 'bg-emerald-400'
-                      : 'bg-amber-400'
-                    : 'bg-slate-700'
-                }`}
-              />
-            ))}
+        <div>
+          <div className="mb-1.5 flex items-center justify-between gap-2">
+            <p className="text-[10px] font-semibold text-slate-500">
+              Открой подсказки по порядку или сразу нужный шаг:
+            </p>
+            <span className="shrink-0 text-[10px] font-bold tabular-nums text-slate-500">
+              {hintLevel}/4
+            </span>
           </div>
-          <span className="shrink-0 text-[10px] font-bold tabular-nums text-slate-500">
-            {hintLevel}/4
-          </span>
+
+          <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
+            {HINT_STEPS.map((step) => {
+              const isOpen = step.level <= hintLevel;
+              const isCurrent = step.level === hintLevel;
+
+              return (
+                <button
+                  key={step.level}
+                  type="button"
+                  onClick={() =>
+                    dispatch({
+                      type: 'ESSAY_HINT_LEVEL_SET',
+                      topicId: topic.id,
+                      level: step.level,
+                    })
+                  }
+                  className={`min-h-9 rounded-lg border px-1.5 py-1.5 text-[10px] font-extrabold leading-tight transition active:scale-95 sm:text-[11px] ${
+                    isOpen
+                      ? step.activeClass
+                      : 'border-slate-700 bg-slate-900/65 text-slate-500 hover:border-slate-500 hover:text-slate-300'
+                  } ${isCurrent ? 'ring-1 ring-white/20' : ''}`}
+                  aria-pressed={isCurrent}
+                  aria-label={`Открыть подсказки до шага ${step.level}`}
+                >
+                  {step.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {hintLevel >= 1 && <TemplateHintView topic={topic} speakGreek={speakGreek} />}
@@ -448,6 +699,7 @@ export const EssaysScreenView: React.FC<EssaysScreenViewProps> = ({
 }) => {
   const [subTab, setSubTab] = useState<EssaySubTab>('informal');
   const [sourceFilter, setSourceFilter] = useState<EssaySourceFilter>('all');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const pinnedIds = state.essayProgress.pinnedIds;
   const completedIds = state.essayProgress.completedIds;
@@ -467,22 +719,36 @@ export const EssaysScreenView: React.FC<EssaysScreenViewProps> = ({
   const pinnedCount = sectionTopics.filter((topic) => pinnedSet.has(topic.id)).length;
 
   const visibleTopics = useMemo(() => {
+    const normalizedSearchQuery = normalizeEssaySearchText(searchQuery.trim());
+
     const filteredTopics = sectionTopics.filter((topic) => {
-      switch (sourceFilter) {
-        case 'pinned':
-          return pinnedSet.has(topic.id);
-        case 'exam_chat':
-          return topic.sourceType === 'exam_chat';
-        case 'keg_2015_2018':
-          return topic.sourceType === 'keg_2015_2018';
-        case 'textbooks':
-          return topic.sourceType === 'klik_b1' || topic.sourceType === 'ellinika_b';
-        case 'completed':
-          return completedSet.has(topic.id);
-        case 'all':
-        default:
-          return true;
-      }
+      const matchesSource = (() => {
+        switch (sourceFilter) {
+          case 'pinned':
+            return pinnedSet.has(topic.id);
+          case 'exam_chat':
+            return topic.sourceType === 'exam_chat';
+          case 'keg_2015_2018':
+            return topic.sourceType === 'keg_2015_2018';
+          case 'textbooks':
+            return topic.sourceType === 'klik_b1' || topic.sourceType === 'ellinika_b';
+          case 'completed':
+            return completedSet.has(topic.id);
+          case 'all':
+          default:
+            return true;
+        }
+      })();
+
+      if (!matchesSource) return false;
+      if (!normalizedSearchQuery) return true;
+
+      return [
+        topic.titleRu,
+        topic.promptGreek,
+        topic.promptRussian,
+        topic.sourceBadge,
+      ].some((field) => normalizeEssaySearchText(field).includes(normalizedSearchQuery));
     });
 
     return filteredTopics
@@ -494,7 +760,7 @@ export const EssaysScreenView: React.FC<EssaysScreenViewProps> = ({
         return pinnedDifference || left.originalIndex - right.originalIndex;
       })
       .map(({ topic }) => topic);
-  }, [completedSet, pinnedSet, sectionTopics, sourceFilter]);
+  }, [completedSet, pinnedSet, searchQuery, sectionTopics, sourceFilter]);
 
   const filterOptions: { id: EssaySourceFilter; label: string }[] = [
     { id: 'all', label: 'Все' },
@@ -508,6 +774,12 @@ export const EssaysScreenView: React.FC<EssaysScreenViewProps> = ({
   const handleSubTabSelect = (nextSubTab: EssaySubTab) => {
     setSubTab(nextSubTab);
     setSourceFilter('all');
+    setSearchQuery('');
+  };
+
+  const showAllTopics = () => {
+    setSourceFilter('all');
+    setSearchQuery('');
   };
 
   return (
@@ -517,7 +789,8 @@ export const EssaysScreenView: React.FC<EssaysScreenViewProps> = ({
           Παραγωγή γραπτού λόγου
         </h1>
         <p className="mt-0.5 text-[11px] leading-relaxed text-slate-400">
-          Сочинения для экзамена B1: задание, чек-лист и подсказки без готового списывания.
+          Сочинения для экзамена B1: задание, интерактивный чек-лист, черновик и подсказки
+          без готового списывания.
         </p>
       </div>
 
@@ -530,7 +803,7 @@ export const EssaysScreenView: React.FC<EssaysScreenViewProps> = ({
               key={tab.id}
               type="button"
               onClick={() => handleSubTabSelect(tab.id)}
-              className={`min-h-9 rounded-lg px-1.5 py-1.5 text-[10px] font-extrabold leading-tight transition ${
+              className={`min-h-10 rounded-lg px-1.5 py-1.5 text-xs font-extrabold leading-tight transition ${
                 isActive
                   ? 'bg-sky-400/20 text-sky-300 shadow-sm'
                   : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'
@@ -547,6 +820,28 @@ export const EssaysScreenView: React.FC<EssaysScreenViewProps> = ({
         <UniversalTemplatesView speakGreek={speakGreek} />
       ) : (
         <>
+          <div className="relative flex items-center">
+            <SearchIcon className="pointer-events-none absolute left-3 h-4 w-4 text-slate-500" />
+            <input
+              type="search"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="Поиск темы, ключевого слова или источника..."
+              aria-label="Поиск по темам сочинений"
+              className="h-11 w-full rounded-xl border border-slate-700 bg-slate-900/75 pl-9 pr-11 text-xs text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-sky-400 [&::-webkit-search-cancel-button]:hidden"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="absolute right-1.5 flex h-8 w-8 items-center justify-center rounded-lg text-sm text-slate-400 transition hover:bg-slate-800 hover:text-white active:scale-90"
+                aria-label="Очистить поиск тем"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-slate-700/60 bg-slate-800/40 px-3 py-2 text-[11px] text-slate-400">
             <span>
               Написано:{' '}
@@ -576,7 +871,7 @@ export const EssaysScreenView: React.FC<EssaysScreenViewProps> = ({
                   key={filterOption.id}
                   type="button"
                   onClick={() => setSourceFilter(filterOption.id)}
-                  className={`shrink-0 rounded-full border px-2.5 py-1.5 text-[10px] font-bold leading-none transition ${
+                  className={`min-h-9 shrink-0 rounded-full border px-3 py-1.5 text-xs font-bold leading-none transition ${
                     isActive
                       ? 'border-sky-400/70 bg-sky-400/20 text-sky-300'
                       : 'border-slate-700 bg-slate-900/65 text-slate-400 hover:border-slate-600 hover:text-slate-200'
@@ -605,14 +900,18 @@ export const EssaysScreenView: React.FC<EssaysScreenViewProps> = ({
             </div>
           ) : (
             <div className="rounded-2xl border border-dashed border-slate-700 bg-slate-900/35 px-4 py-8 text-center">
-              <p className="text-sm font-bold text-slate-300">В этом фильтре пока нет тем</p>
+              <p className="text-sm font-bold text-slate-300">
+                {searchQuery.trim() ? 'По запросу ничего не найдено' : 'В этом фильтре пока нет тем'}
+              </p>
               <p className="mt-1 text-xs leading-relaxed text-slate-500">
-                Выбери другой источник или вернись к полному списку.
+                {searchQuery.trim()
+                  ? 'Попробуй другое ключевое слово без ударений или сбрось фильтры.'
+                  : 'Выбери другой источник или вернись к полному списку.'}
               </p>
               <button
                 type="button"
-                onClick={() => setSourceFilter('all')}
-                className="mt-3 rounded-lg border border-sky-400/40 bg-sky-400/10 px-3 py-1.5 text-xs font-bold text-sky-300 transition hover:bg-sky-400/20"
+                onClick={showAllTopics}
+                className="mt-3 min-h-9 rounded-lg border border-sky-400/40 bg-sky-400/10 px-3 py-1.5 text-xs font-bold text-sky-300 transition hover:bg-sky-400/20"
               >
                 Показать все темы
               </button>
