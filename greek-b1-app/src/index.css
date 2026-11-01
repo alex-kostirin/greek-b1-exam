@@ -38,6 +38,18 @@
   }
 }
 
+@keyframes card-flip {
+  0% {
+    transform: perspective(1000px) rotateY(0deg) scale(1);
+  }
+  45% {
+    transform: perspective(1000px) rotateY(14deg) scale(0.97);
+  }
+  100% {
+    transform: perspective(1000px) rotateY(0deg) scale(1);
+  }
+}
+
 @layer utilities {
   .animate-shake {
     animation: shake 0.35s ease-in-out;
@@ -49,6 +61,10 @@
 
   .animate-fade-up {
     animation: fade-up 0.18s ease-out both;
+  }
+
+  .animate-card-flip {
+    animation: card-flip 0.28s cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   .no-scrollbar::-webkit-scrollbar {
@@ -64,7 +80,8 @@
 @media (prefers-reduced-motion: reduce) {
   .animate-shake,
   .animate-pop,
-  .animate-fade-up {
+  .animate-fade-up,
+  .animate-card-flip {
     animation: none !important;
   }
 }

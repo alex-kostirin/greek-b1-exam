@@ -1,6 +1,5 @@
 import React from 'react';
 import { AppIntent } from '../../../model/appIntent';
-import { splitGreekArticle } from '../../../model/appSelectors';
 import { AppState } from '../../../model/appState';
 import { RefreshIcon } from '../../../shared/ui/Icons';
 
@@ -9,7 +8,10 @@ interface MatchScreenViewProps {
   dispatch: (intent: AppIntent) => void;
 }
 
-export const MatchScreenView: React.FC<MatchScreenViewProps> = ({ state, dispatch }) => {
+export const MatchScreenView: React.FC<MatchScreenViewProps> = ({
+  state,
+  dispatch,
+}) => {
   const {
     leftColumn,
     rightColumn,
@@ -19,9 +21,12 @@ export const MatchScreenView: React.FC<MatchScreenViewProps> = ({ state, dispatc
     mismatchedPair,
   } = state.matchBoard;
 
-  const isComplete = matchedGreeks.length === leftColumn.length && leftColumn.length > 0;
+  const isComplete =
+    matchedGreeks.length === leftColumn.length && leftColumn.length > 0;
   const progressPercent =
-    leftColumn.length > 0 ? (matchedGreeks.length / leftColumn.length) * 100 : 0;
+    leftColumn.length > 0
+      ? (matchedGreeks.length / leftColumn.length) * 100
+      : 0;
 
   const startNewRound = () => dispatch({ type: 'MATCH_NEW_ROUND' });
 
@@ -30,7 +35,9 @@ export const MatchScreenView: React.FC<MatchScreenViewProps> = ({ state, dispatc
       <header className="space-y-2.5 rounded-2xl border border-slate-800/80 bg-[#101a2c]/80 p-3 shadow-sm">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
-            <h2 className="text-sm font-extrabold text-slate-100">Соедини пары</h2>
+            <h2 className="text-sm font-extrabold text-slate-100">
+              Соедини пары
+            </h2>
             <p className="mt-0.5 text-[11px] font-medium tabular-nums text-slate-400">
               Собрано {matchedGreeks.length} из {leftColumn.length}
             </p>
@@ -56,7 +63,9 @@ export const MatchScreenView: React.FC<MatchScreenViewProps> = ({ state, dispatc
         >
           <div
             className={`h-full rounded-full transition-all duration-500 ${
-              isComplete ? 'bg-emerald-400' : 'bg-gradient-to-r from-sky-500 to-cyan-400'
+              isComplete
+                ? 'bg-emerald-400'
+                : 'bg-gradient-to-r from-sky-500 to-cyan-400'
             }`}
             style={{ width: `${progressPercent}%` }}
           />
@@ -92,14 +101,22 @@ export const MatchScreenView: React.FC<MatchScreenViewProps> = ({ state, dispatc
             const isMatched = matchedGreeks.includes(item.greek);
             const isSelected = selectedLeftGreek === item.greek;
             const isError = mismatchedPair?.leftGreek === item.greek;
-            const { article, word, extra } = splitGreekArticle(item.greek);
+            const greekLabel = item.greek.split(' (')[0];
+            const parentheticalIndex = item.greek.indexOf('(');
+            const parentheticalNote =
+              parentheticalIndex === -1
+                ? null
+                : item.greek.slice(parentheticalIndex).trim();
 
-            let tileClass = 'border-slate-700 bg-[#151f32] text-slate-100';
+            let tileClass =
+              'border-slate-700 bg-[#151f32] text-slate-100';
+
             if (isMatched) {
               tileClass =
                 'opacity-35 scale-[0.98] border-emerald-500/40 bg-emerald-500/10 text-emerald-300';
             } else if (isError) {
-              tileClass = 'animate-shake border-rose-500 bg-rose-500/25 text-rose-100';
+              tileClass =
+                'animate-shake border-rose-500 bg-rose-500/25 text-rose-100';
             } else if (isSelected) {
               tileClass =
                 'border-sky-400 bg-sky-400/20 text-sky-50 shadow-md shadow-sky-950/30';
@@ -131,17 +148,10 @@ export const MatchScreenView: React.FC<MatchScreenViewProps> = ({ state, dispatc
                 )}
 
                 <span className="flex min-w-0 flex-col items-center gap-1">
-                  <span className="flex flex-wrap items-center justify-center gap-1.5">
-                    {article && (
-                      <span className="rounded-md border border-sky-400/25 bg-sky-400/10 px-1.5 py-0.5 text-[11px] font-extrabold text-sky-300">
-                        {article}
-                      </span>
-                    )}
-                    <span className="break-words">{word}</span>
-                  </span>
-                  {extra && (
+                  <span className="max-w-full break-words">{greekLabel}</span>
+                  {parentheticalNote && (
                     <span className="max-w-full break-words text-[10px] font-medium leading-snug text-slate-400">
-                      {extra}
+                      {parentheticalNote}
                     </span>
                   )}
                 </span>
@@ -156,12 +166,15 @@ export const MatchScreenView: React.FC<MatchScreenViewProps> = ({ state, dispatc
             const isSelected = selectedRightGreek === item.greek;
             const isError = mismatchedPair?.rightGreek === item.greek;
 
-            let tileClass = 'border-slate-700 bg-[#151f32] text-slate-100';
+            let tileClass =
+              'border-slate-700 bg-[#151f32] text-slate-100';
+
             if (isMatched) {
               tileClass =
                 'opacity-35 scale-[0.98] border-emerald-500/40 bg-emerald-500/10 text-emerald-300';
             } else if (isError) {
-              tileClass = 'animate-shake border-rose-500 bg-rose-500/25 text-rose-100';
+              tileClass =
+                'animate-shake border-rose-500 bg-rose-500/25 text-rose-100';
             } else if (isSelected) {
               tileClass =
                 'border-sky-400 bg-sky-400/20 text-sky-50 shadow-md shadow-sky-950/30';

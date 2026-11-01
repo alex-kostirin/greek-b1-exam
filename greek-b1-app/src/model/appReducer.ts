@@ -1,12 +1,16 @@
 import { generateMatchBoard } from '../features/match/model/matchGenerator';
 import { generateQuizQuestion } from '../features/quiz/model/quizGenerator';
 import { srsService } from '../shared/services/srsService';
-import { storageService } from '../shared/services/storageService';
+import {
+  storageService,
+  UserAppSettings,
+} from '../shared/services/storageService';
 import { VocabularyItem, WordSrsMap } from '../shared/types/vocabulary';
 import { EssayUserProgress } from '../shared/types/essay';
 import { AppIntent } from './appIntent';
 import {
   CUSTOM_WORDS_MODULE,
+  REVIEW_HARD_MODULE,
   SMART_MIX_MODULE,
   selectAllVocabulary,
   selectCandidatePool,
@@ -16,25 +20,39 @@ import { AppState, LastGradedCardSnapshot } from './appState';
 export function createInitialAppState(
   initialSrsMap: WordSrsMap,
   initialCustomWords: VocabularyItem[],
-  initialEssayProgress: EssayUserProgress = { pinnedIds: [], completedIds: [], hintLevels: {} }
+  initialEssayProgress: EssayUserProgress = {
+    pinnedIds: [],
+    completedIds: [],
+    hintLevels: {},
+  },
+  initialSettings?: Partial<UserAppSettings>,
 ): AppState {
-  const groupingMode = 'exam';
-  const activeClickChapter = null;
+  const groupingMode = initialSettings?.groupingMode ?? 'exam';
+  const activeClickChapter =
+    initialSettings?.activeClickChapter !== undefined
+      ? initialSettings.activeClickChapter
+      : null;
+  const activeModule = initialSettings?.activeModule ?? SMART_MIX_MODULE;
+  const activeTab = initialSettings?.activeTab ?? 'swipe';
+  const directionGreekToRussian =
+    initialSettings?.directionGreekToRussian ?? true;
+  const autoTtsEnabled = initialSettings?.autoTtsEnabled ?? false;
+
   const pool = selectCandidatePool(
-    SMART_MIX_MODULE,
+    activeModule,
     initialSrsMap,
     initialCustomWords,
     groupingMode,
-    activeClickChapter
+    activeClickChapter,
   );
   const allVocab = selectAllVocabulary(initialCustomWords);
   const firstCard = srsService.pickNextSmartCard(pool, initialSrsMap, []);
 
   return {
-    activeTab: 'swipe',
-    activeModule: SMART_MIX_MODULE,
-    directionGreekToRussian: true,
-    autoTtsEnabled: false,
+    activeTab,
+    activeModule,
+    directionGreekToRussian,
+    autoTtsEnabled,
     isCardRevealed: false,
     streakCount: 0,
     currentCard: firstCard,
@@ -60,9 +78,10 @@ export function appReducer(state: AppState, intent: AppIntent): AppState {
         state.srsMap,
         state.customWords,
         state.groupingMode,
-        state.activeClickChapter
+        state.activeClickChapter,
       );
       const allVocab = selectAllVocabulary(state.customWords);
+
       return {
         ...state,
         activeTab: intent.tab,
@@ -74,7 +93,8 @@ export function appReducer(state: AppState, intent: AppIntent): AppState {
             : state.quizQuestion,
         matchBoard:
           intent.tab === 'match' &&
-          state.matchBoard.matchedGreeks.length === state.matchBoard.leftColumn.length
+          state.matchBoard.matchedGreeks.length ===
+            state.matchBoard.leftColumn.length
             ? generateMatchBoard(pool)
             : state.matchBoard,
       };
@@ -86,14 +106,15 @@ export function appReducer(state: AppState, intent: AppIntent): AppState {
         state.srsMap,
         state.customWords,
         state.groupingMode,
-        state.activeClickChapter
+        state.activeClickChapter,
       );
       const allVocab = selectAllVocabulary(state.customWords);
       const nextCard = srsService.pickNextSmartCard(
         pool,
         state.srsMap,
-        state.recentGreeks
+        state.recentGreeks,
       );
+
       return {
         ...state,
         activeModule: intent.module,
@@ -131,7 +152,7 @@ export function appReducer(state: AppState, intent: AppIntent): AppState {
       const updatedRecord = srsService.gradeWord(
         state.srsMap[currentGreek],
         intent.isKnown,
-        now
+        now,
       );
       const updatedSrsMap: WordSrsMap = {
         ...state.srsMap,
@@ -150,14 +171,14 @@ export function appReducer(state: AppState, intent: AppIntent): AppState {
         updatedSrsMap,
         state.customWords,
         state.groupingMode,
-        state.activeClickChapter
+        state.activeClickChapter,
       );
       const updatedRecent = [...state.recentGreeks.slice(-8), currentGreek];
       const nextCard = srsService.pickNextSmartCard(
         nextPool,
         updatedSrsMap,
         updatedRecent,
-        now
+        now,
       );
 
       return {
@@ -174,7 +195,8 @@ export function appReducer(state: AppState, intent: AppIntent): AppState {
     case 'UNDO_LAST_CARD_GRADE': {
       if (!state.lastGradedCardSnapshot) return state;
 
-      const { card, previousRecord, previousStreakCount } = state.lastGradedCardSnapshot;
+      const { card, previousRecord, previousStreakCount } =
+        state.lastGradedCardSnapshot;
       const updatedSrsMap = { ...state.srsMap };
 
       if (previousRecord) {
@@ -197,13 +219,14 @@ export function appReducer(state: AppState, intent: AppIntent): AppState {
       if (state.quizQuestion.selectedOptionGreek !== null) {
         return state;
       }
+
       const now = Date.now();
       const targetGreek = state.quizQuestion.targetItem.greek;
       const isCorrect = intent.optionGreek === targetGreek;
       const updatedRecord = srsService.gradeWord(
         state.srsMap[targetGreek],
         isCorrect,
-        now
+        now,
       );
 
       return {
@@ -226,13 +249,13 @@ export function appReducer(state: AppState, intent: AppIntent): AppState {
         state.srsMap,
         state.customWords,
         state.groupingMode,
-        state.activeClickChapter
+        state.activeClickChapter,
       );
       const allVocab = selectAllVocabulary(state.customWords);
       const nextTarget = srsService.pickNextSmartCard(
         pool,
         state.srsMap,
-        state.recentGreeks
+        state.recentGreeks,
       );
 
       return {
@@ -245,7 +268,11 @@ export function appReducer(state: AppState, intent: AppIntent): AppState {
 
     case 'MATCH_TILE_CLICKED': {
       const board = state.matchBoard;
-      if (board.matchedGreeks.includes(intent.greekKey) || board.mismatchedPair !== null) {
+
+      if (
+        board.matchedGreeks.includes(intent.greekKey) ||
+        board.mismatchedPair !== null
+      ) {
         return state;
       }
 
@@ -265,9 +292,14 @@ export function appReducer(state: AppState, intent: AppIntent): AppState {
 
       if (nextLeft && nextRight) {
         const now = Date.now();
+
         if (nextLeft === nextRight) {
           const updatedMatched = [...board.matchedGreeks, nextLeft];
-          const updatedRecord = srsService.gradeWord(state.srsMap[nextLeft], true, now);
+          const updatedRecord = srsService.gradeWord(
+            state.srsMap[nextLeft],
+            true,
+            now,
+          );
 
           return {
             ...state,
@@ -286,7 +318,12 @@ export function appReducer(state: AppState, intent: AppIntent): AppState {
           };
         }
 
-        const penalizedLeft = srsService.gradeWord(state.srsMap[nextLeft], false, now);
+        const penalizedLeft = srsService.gradeWord(
+          state.srsMap[nextLeft],
+          false,
+          now,
+        );
+
         return {
           ...state,
           srsMap: {
@@ -298,7 +335,10 @@ export function appReducer(state: AppState, intent: AppIntent): AppState {
             ...board,
             selectedLeftGreek: null,
             selectedRightGreek: null,
-            mismatchedPair: { leftGreek: nextLeft, rightGreek: nextRight },
+            mismatchedPair: {
+              leftGreek: nextLeft,
+              rightGreek: nextRight,
+            },
           },
         };
       }
@@ -328,17 +368,17 @@ export function appReducer(state: AppState, intent: AppIntent): AppState {
         state.srsMap,
         state.customWords,
         state.groupingMode,
-        state.activeClickChapter
+        state.activeClickChapter,
       );
       const smartSample = Array.from({ length: 5 }, (_, idx) =>
         srsService.pickNextSmartCard(
           pool,
           state.srsMap,
-          state.recentGreeks.concat(idx.toString())
-        )
+          state.recentGreeks.concat(idx.toString()),
+        ),
       );
       const uniqueSample = Array.from(
-        new Map(smartSample.map((item) => [item.greek, item])).values()
+        new Map(smartSample.map((item) => [item.greek, item])).values(),
       );
       const deckForMatch = uniqueSample.length >= 4 ? uniqueSample : pool;
 
@@ -378,6 +418,7 @@ export function appReducer(state: AppState, intent: AppIntent): AppState {
         newWord,
         ...state.customWords.filter((item) => item.greek !== newWord.greek),
       ];
+
       return {
         ...state,
         customWords: updatedCustomWords,
@@ -387,16 +428,22 @@ export function appReducer(state: AppState, intent: AppIntent): AppState {
     }
 
     case 'BACKUP_RESTORED': {
-      const mergedSrs = storageService.mergeSrsMaps(state.srsMap, intent.srsMap);
-      const existingGreeks = new Set(state.customWords.map((item) => item.greek));
+      const mergedSrs = storageService.mergeSrsMaps(
+        state.srsMap,
+        intent.srsMap,
+      );
+      const existingGreeks = new Set(
+        state.customWords.map((item) => item.greek),
+      );
       const mergedCustom = [
         ...state.customWords,
         ...intent.customWords.filter((item) => !existingGreeks.has(item.greek)),
       ];
       const mergedEssayProgress = storageService.mergeEssayProgress(
         state.essayProgress,
-        intent.essayProgress
+        intent.essayProgress,
       );
+
       return {
         ...state,
         srsMap: mergedSrs,
@@ -417,37 +464,128 @@ export function appReducer(state: AppState, intent: AppIntent): AppState {
       };
 
     case 'CLOUD_STATE_HYDRATED': {
-      const mergedSrs = storageService.mergeSrsMaps(state.srsMap, intent.srsMap);
-      const existingGreeks = new Set(state.customWords.map((item) => item.greek));
+      const mergedSrs = storageService.mergeSrsMaps(
+        state.srsMap,
+        intent.srsMap,
+      );
+      const existingGreeks = new Set(
+        state.customWords.map((item) => item.greek),
+      );
       const mergedCustom = [
         ...state.customWords,
         ...intent.customWords.filter((item) => !existingGreeks.has(item.greek)),
       ];
       const mergedEssayProgress = storageService.mergeEssayProgress(
         state.essayProgress,
-        intent.essayProgress
+        intent.essayProgress,
       );
-      return {
+      const hydratedState: AppState = {
         ...state,
         srsMap: mergedSrs,
         customWords: mergedCustom,
         essayProgress: mergedEssayProgress,
       };
+
+      const settings = intent.settings;
+      if (!settings) return hydratedState;
+
+      const localSettings = storageService.loadLocalSettings();
+      const localUpdatedAt = localSettings.updatedAt ?? 0;
+      const cloudUpdatedAt = settings.updatedAt ?? 0;
+      const hasNewerLocalSettings =
+        localUpdatedAt > 0 &&
+        cloudUpdatedAt > 0 &&
+        localUpdatedAt > cloudUpdatedAt;
+
+      if (hasNewerLocalSettings) {
+        return hydratedState;
+      }
+
+      const nextActiveModule = settings.activeModule ?? state.activeModule;
+      const nextGroupingMode = settings.groupingMode ?? state.groupingMode;
+      const nextActiveClickChapter =
+        settings.activeClickChapter !== undefined
+          ? settings.activeClickChapter
+          : state.activeClickChapter;
+      const nextDirectionGreekToRussian =
+        settings.directionGreekToRussian ?? state.directionGreekToRussian;
+      const nextAutoTtsEnabled =
+        settings.autoTtsEnabled ?? state.autoTtsEnabled;
+      const shouldRebuildPool =
+        nextActiveModule !== state.activeModule ||
+        nextGroupingMode !== state.groupingMode ||
+        nextActiveClickChapter !== state.activeClickChapter;
+
+      let nextCard = state.currentCard;
+      let nextRecentGreeks = state.recentGreeks;
+      let nextQuizQuestion = state.quizQuestion;
+      let nextMatchBoard = state.matchBoard;
+
+      if (shouldRebuildPool) {
+        const pool = selectCandidatePool(
+          nextActiveModule,
+          mergedSrs,
+          mergedCustom,
+          nextGroupingMode,
+          nextActiveClickChapter,
+        );
+        const allVocab = selectAllVocabulary(mergedCustom);
+
+        nextCard = srsService.pickNextSmartCard(
+          pool,
+          mergedSrs,
+          state.recentGreeks,
+        );
+        nextRecentGreeks = [
+          ...state.recentGreeks.slice(-8),
+          nextCard.greek,
+        ];
+        nextQuizQuestion = generateQuizQuestion(nextCard, allVocab);
+        nextMatchBoard = generateMatchBoard(pool);
+      }
+
+      const shouldConcealCard =
+        shouldRebuildPool ||
+        nextDirectionGreekToRussian !== state.directionGreekToRussian;
+
+      return {
+        ...hydratedState,
+        activeTab: settings.activeTab ?? state.activeTab,
+        activeModule: nextActiveModule,
+        groupingMode: nextGroupingMode,
+        activeClickChapter: nextActiveClickChapter,
+        directionGreekToRussian: nextDirectionGreekToRussian,
+        autoTtsEnabled: nextAutoTtsEnabled,
+        currentCard: nextCard,
+        recentGreeks: nextRecentGreeks,
+        isCardRevealed: shouldConcealCard ? false : state.isCardRevealed,
+        lastGradedCardSnapshot: shouldRebuildPool
+          ? null
+          : state.lastGradedCardSnapshot,
+        quizQuestion: nextQuizQuestion,
+        matchBoard: nextMatchBoard,
+      };
     }
 
     case 'GROUPING_MODE_TOGGLED': {
       const newMode = intent.mode;
-      const newClickChapter = newMode === 'click' ? (state.activeClickChapter ?? 1) : null;
+      const newClickChapter =
+        newMode === 'click' ? state.activeClickChapter ?? 1 : null;
       const newActiveModule = SMART_MIX_MODULE;
       const pool = selectCandidatePool(
         newActiveModule,
         state.srsMap,
         state.customWords,
         newMode,
-        newClickChapter
+        newClickChapter,
       );
       const allVocab = selectAllVocabulary(state.customWords);
-      const nextCard = srsService.pickNextSmartCard(pool, state.srsMap, state.recentGreeks);
+      const nextCard = srsService.pickNextSmartCard(
+        pool,
+        state.srsMap,
+        state.recentGreeks,
+      );
+
       return {
         ...state,
         groupingMode: newMode,
@@ -464,16 +602,24 @@ export function appReducer(state: AppState, intent: AppIntent): AppState {
 
     case 'CLICK_CHAPTER_SELECTED': {
       const chapter = intent.chapter;
-      const newActiveModule = SMART_MIX_MODULE;
+      const newActiveModule =
+        state.activeModule === REVIEW_HARD_MODULE
+          ? REVIEW_HARD_MODULE
+          : SMART_MIX_MODULE;
       const pool = selectCandidatePool(
         newActiveModule,
         state.srsMap,
         state.customWords,
         'click',
-        chapter
+        chapter,
       );
       const allVocab = selectAllVocabulary(state.customWords);
-      const nextCard = srsService.pickNextSmartCard(pool, state.srsMap, state.recentGreeks);
+      const nextCard = srsService.pickNextSmartCard(
+        pool,
+        state.srsMap,
+        state.recentGreeks,
+      );
+
       return {
         ...state,
         activeClickChapter: chapter,
@@ -491,8 +637,9 @@ export function appReducer(state: AppState, intent: AppIntent): AppState {
       const pinnedIds = state.essayProgress.pinnedIds;
       const isPinned = pinnedIds.includes(intent.topicId);
       const updatedPinned = isPinned
-        ? pinnedIds.filter(id => id !== intent.topicId)
+        ? pinnedIds.filter((id) => id !== intent.topicId)
         : [...pinnedIds, intent.topicId];
+
       return {
         ...state,
         essayProgress: {
@@ -506,8 +653,9 @@ export function appReducer(state: AppState, intent: AppIntent): AppState {
       const completedIds = state.essayProgress.completedIds;
       const isCompleted = completedIds.includes(intent.topicId);
       const updatedCompleted = isCompleted
-        ? completedIds.filter(id => id !== intent.topicId)
+        ? completedIds.filter((id) => id !== intent.topicId)
         : [...completedIds, intent.topicId];
+
       return {
         ...state,
         essayProgress: {
@@ -520,6 +668,7 @@ export function appReducer(state: AppState, intent: AppIntent): AppState {
     case 'ESSAY_HINT_STEP_ADVANCED': {
       const currentLevel = state.essayProgress.hintLevels[intent.topicId] ?? 0;
       const nextLevel = (currentLevel + 1) % 5;
+
       return {
         ...state,
         essayProgress: {

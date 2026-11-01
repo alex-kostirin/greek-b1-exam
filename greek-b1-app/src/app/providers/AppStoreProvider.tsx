@@ -1,11 +1,20 @@
-import React, { createContext, useCallback, useContext, useEffect, useReducer } from 'react';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useReducer,
+} from 'react';
 import { AppIntent } from '../../model/appIntent';
 import { appReducer, createInitialAppState } from '../../model/appReducer';
 import { selectAllVocabulary } from '../../model/appSelectors';
 import { AppState } from '../../model/appState';
 import { BASE_VOCABULARY_DATASET } from '../../shared/data/vocabularyDataset';
 import { speechService } from '../../shared/services/speechService';
-import { storageService } from '../../shared/services/storageService';
+import {
+  storageService,
+  UserAppSettings,
+} from '../../shared/services/storageService';
 import { telegramService } from '../../shared/services/telegramService';
 
 interface AppStoreContextValue {
@@ -16,16 +25,16 @@ interface AppStoreContextValue {
 
 const AppStoreContext = createContext<AppStoreContextValue | null>(null);
 
-export const AppStoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [state, rawDispatch] = useReducer(
-    appReducer,
-    undefined,
-    () =>
-      createInitialAppState(
-        storageService.loadLocalSrsMap(),
-        storageService.loadLocalCustomWords(),
-        storageService.loadLocalEssayProgress()
-      )
+export const AppStoreProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
+  const [state, rawDispatch] = useReducer(appReducer, undefined, () =>
+    createInitialAppState(
+      storageService.loadLocalSrsMap(),
+      storageService.loadLocalCustomWords(),
+      storageService.loadLocalEssayProgress(),
+      storageService.loadLocalSettings(),
+    ),
   );
 
   useEffect(() => {
@@ -36,17 +45,45 @@ export const AppStoreProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         srsMap: cloudPayload.srsMap,
         customWords: cloudPayload.customWords,
         essayProgress: cloudPayload.essayProgress,
+        settings: cloudPayload.settings,
       });
     });
   }, []);
 
   useEffect(() => {
     const allVocabulary = selectAllVocabulary(state.customWords);
-    storageService.persistState(state.srsMap, state.customWords, allVocabulary, state.essayProgress);
-  }, [state.srsMap, state.customWords, state.essayProgress]);
+    const settings: UserAppSettings = {
+      activeTab: state.activeTab,
+      activeModule: state.activeModule,
+      groupingMode: state.groupingMode,
+      activeClickChapter: state.activeClickChapter,
+      directionGreekToRussian: state.directionGreekToRussian,
+      autoTtsEnabled: state.autoTtsEnabled,
+      updatedAt: Date.now(),
+    };
+
+    storageService.persistState(
+      state.srsMap,
+      state.customWords,
+      allVocabulary,
+      state.essayProgress,
+      settings,
+    );
+  }, [
+    state.srsMap,
+    state.customWords,
+    state.essayProgress,
+    state.activeTab,
+    state.activeModule,
+    state.groupingMode,
+    state.activeClickChapter,
+    state.directionGreekToRussian,
+    state.autoTtsEnabled,
+  ]);
 
   useEffect(() => {
     if (!state.autoTtsEnabled || !state.directionGreekToRussian) return;
+
     if (state.activeTab === 'swipe') {
       speechService.speakGreek(state.currentCard.greek);
     } else if (
@@ -65,11 +102,16 @@ export const AppStoreProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   ]);
 
   useEffect(() => {
-    if (state.activeTab !== 'quiz' || state.quizQuestion.selectedOptionGreek === null) {
+    if (
+      state.activeTab !== 'quiz' ||
+      state.quizQuestion.selectedOptionGreek === null
+    ) {
       return;
     }
+
     const isCorrect =
-      state.quizQuestion.selectedOptionGreek === state.quizQuestion.targetItem.greek;
+      state.quizQuestion.selectedOptionGreek ===
+      state.quizQuestion.targetItem.greek;
     const delayMs = isCorrect ? 650 : 1400;
 
     const timerId = window.setTimeout(() => {
@@ -85,23 +127,30 @@ export const AppStoreProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   useEffect(() => {
     if (state.matchBoard.mismatchedPair === null) return;
+
     const timerId = window.setTimeout(() => {
       rawDispatch({ type: 'MATCH_MISMATCH_CLEARED' });
     }, 500);
+
     return () => window.clearTimeout(timerId);
   }, [state.matchBoard.mismatchedPair]);
 
   useEffect(() => {
     if (
       state.matchBoard.leftColumn.length > 0 &&
-      state.matchBoard.matchedGreeks.length === state.matchBoard.leftColumn.length
+      state.matchBoard.matchedGreeks.length ===
+        state.matchBoard.leftColumn.length
     ) {
       const timerId = window.setTimeout(() => {
         rawDispatch({ type: 'MATCH_NEW_ROUND' });
       }, 450);
+
       return () => window.clearTimeout(timerId);
     }
-  }, [state.matchBoard.matchedGreeks.length, state.matchBoard.leftColumn.length]);
+  }, [
+    state.matchBoard.matchedGreeks.length,
+    state.matchBoard.leftColumn.length,
+  ]);
 
   const dispatch = useCallback(
     (intent: AppIntent) => {
@@ -109,34 +158,43 @@ export const AppStoreProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         case 'CARD_GRADED':
           telegramService.triggerHaptic(intent.isKnown ? 'success' : 'warning');
           break;
+
         case 'QUIZ_OPTION_SELECTED': {
-          const isCorrect = intent.optionGreek === state.quizQuestion.targetItem.greek;
+          const isCorrect =
+            intent.optionGreek === state.quizQuestion.targetItem.greek;
           telegramService.triggerHaptic(isCorrect ? 'success' : 'error');
+
           if (isCorrect && state.autoTtsEnabled) {
             speechService.speakGreek(state.quizQuestion.targetItem.greek);
           }
           break;
         }
+
         case 'MATCH_TILE_CLICKED':
           telegramService.triggerHaptic('light');
+
           if (intent.side === 'left' && state.autoTtsEnabled) {
             speechService.speakGreek(intent.greekKey);
           }
           break;
+
         case 'CUSTOM_WORD_ADDED':
         case 'BACKUP_RESTORED':
           telegramService.triggerHaptic('success');
           break;
+
         case 'ESSAY_COMPLETED_TOGGLED':
           telegramService.triggerHaptic('success');
           break;
+
         default:
           telegramService.triggerHaptic('light');
           break;
       }
+
       rawDispatch(intent);
     },
-    [state.quizQuestion.targetItem.greek, state.autoTtsEnabled]
+    [state.quizQuestion.targetItem.greek, state.autoTtsEnabled],
   );
 
   const speakGreek = useCallback((text: string) => {
@@ -153,8 +211,10 @@ export const AppStoreProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
 export function useAppStore(): AppStoreContextValue {
   const context = useContext(AppStoreContext);
+
   if (!context) {
     throw new Error('useAppStore must be used within AppStoreProvider');
   }
+
   return context;
 }

@@ -1,6 +1,5 @@
 import React from 'react';
 import { AppIntent } from '../../../model/appIntent';
-import { splitGreekArticle } from '../../../model/appSelectors';
 import { AppState } from '../../../model/appState';
 import { MASTERY_THRESHOLD } from '../../../shared/types/vocabulary';
 import { CardIllustrationView } from '../../../shared/ui/CardIllustrationView';
@@ -11,70 +10,6 @@ interface QuizScreenViewProps {
   dispatch: (intent: AppIntent) => void;
   speakGreek: (text: string) => void;
 }
-
-type GreekArticle = 'ο' | 'η' | 'το' | 'οι' | 'τα';
-
-const getArticleBadgeClass = (article: GreekArticle): string => {
-  if (article === 'ο' || article === 'οι') {
-    return 'border-sky-400/40 bg-sky-500/20 text-sky-300';
-  }
-  if (article === 'η') {
-    return 'border-pink-400/40 bg-pink-500/20 text-pink-300';
-  }
-  return 'border-amber-400/40 bg-amber-500/20 text-amber-300';
-};
-
-const GreekQuestionPrompt: React.FC<{ greek: string }> = ({ greek }) => {
-  const { article, word, extra } = splitGreekArticle(greek);
-
-  return (
-    <div className="flex max-w-full select-text flex-col items-center">
-      <div className="flex max-w-full flex-wrap items-center justify-center gap-2">
-        {article && (
-          <span
-            className={`inline-flex shrink-0 items-center rounded-lg border px-2 py-1 text-base font-extrabold leading-none sm:text-lg ${getArticleBadgeClass(
-              article,
-            )}`}
-          >
-            {article}
-          </span>
-        )}
-        <span className="max-w-full break-words text-3xl font-extrabold leading-tight text-white sm:text-4xl">
-          {word}
-        </span>
-      </div>
-      {extra && (
-        <span className="mt-1 text-xs font-medium leading-snug text-slate-400 sm:text-sm">
-          {extra}
-        </span>
-      )}
-    </div>
-  );
-};
-
-const GreekOptionLabel: React.FC<{ greek: string }> = ({ greek }) => {
-  const { article, word, extra } = splitGreekArticle(greek);
-
-  return (
-    <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-      {article && (
-        <span
-          className={`inline-flex shrink-0 items-center rounded-md border px-1.5 py-0.5 text-xs font-extrabold leading-none ${getArticleBadgeClass(
-            article,
-          )}`}
-        >
-          {article}
-        </span>
-      )}
-      <span className="min-w-0 break-words">{word}</span>
-      {extra && (
-        <span className="text-[11px] font-medium leading-snug text-slate-400">
-          {extra}
-        </span>
-      )}
-    </span>
-  );
-};
 
 export const QuizScreenView: React.FC<QuizScreenViewProps> = ({
   state,
@@ -124,7 +59,9 @@ export const QuizScreenView: React.FC<QuizScreenViewProps> = ({
 
       <div className="flex min-h-[58px] items-center justify-center break-words px-1 py-1 text-center">
         {state.directionGreekToRussian ? (
-          <GreekQuestionPrompt greek={targetItem.greek} />
+          <div className="max-w-full select-text break-words text-3xl font-extrabold leading-tight text-white sm:text-4xl">
+            {targetItem.greek}
+          </div>
         ) : (
           <div className="select-text text-3xl font-extrabold leading-tight text-white sm:text-4xl">
             {targetItem.russian}
@@ -177,12 +114,10 @@ export const QuizScreenView: React.FC<QuizScreenViewProps> = ({
               }
               className={`flex min-h-[48px] w-full select-none items-center justify-between gap-3 rounded-2xl border px-3.5 py-2.5 text-left text-sm font-semibold leading-snug transition ${buttonStyle} ${animationClass}`}
             >
-              <span className="min-w-0 flex-1">
-                {state.directionGreekToRussian ? (
-                  option.russian
-                ) : (
-                  <GreekOptionLabel greek={option.greek} />
-                )}
+              <span className="min-w-0 flex-1 break-words">
+                {state.directionGreekToRussian
+                  ? option.russian
+                  : option.greek}
               </span>
 
               {hasAnswered && isTarget && (

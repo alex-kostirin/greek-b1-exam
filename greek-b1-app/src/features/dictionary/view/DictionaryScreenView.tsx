@@ -1,9 +1,6 @@
 import React, { useState } from 'react';
 import { AppIntent } from '../../../model/appIntent';
-import {
-  selectFilteredDictionaryList,
-  splitGreekArticle,
-} from '../../../model/appSelectors';
+import { selectFilteredDictionaryList } from '../../../model/appSelectors';
 import { AppState } from '../../../model/appState';
 import { srsService } from '../../../shared/services/srsService';
 import { MASTERY_THRESHOLD } from '../../../shared/types/vocabulary';
@@ -22,20 +19,6 @@ const getSrsStatus = (box: number): SrsStatus => {
   if (box >= MASTERY_THRESHOLD) return 'mastered';
   if (box > 0) return 'learning';
   return 'new';
-};
-
-const getArticleBadgeClass = (article: string): string => {
-  switch (article) {
-    case 'η':
-      return 'border-rose-400/35 bg-rose-400/10 text-rose-300';
-    case 'το':
-    case 'τα':
-      return 'border-emerald-400/35 bg-emerald-400/10 text-emerald-300';
-    case 'ο':
-    case 'οι':
-    default:
-      return 'border-sky-400/35 bg-sky-400/10 text-sky-300';
-  }
 };
 
 export const DictionaryScreenView: React.FC<DictionaryScreenViewProps> = ({
@@ -105,7 +88,9 @@ export const DictionaryScreenView: React.FC<DictionaryScreenViewProps> = ({
             {state.searchQuery.length > 0 && (
               <button
                 type="button"
-                onClick={() => dispatch({ type: 'SEARCH_QUERY_CHANGED', query: '' })}
+                onClick={() =>
+                  dispatch({ type: 'SEARCH_QUERY_CHANGED', query: '' })
+                }
                 className="absolute right-1 flex h-8 w-8 items-center justify-center rounded-lg text-sm text-slate-400 transition hover:bg-slate-700/60 hover:text-white active:scale-90"
                 aria-label="Очистить поиск"
               >
@@ -114,10 +99,12 @@ export const DictionaryScreenView: React.FC<DictionaryScreenViewProps> = ({
             )}
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <button
               type="button"
-              onClick={() => dispatch({ type: 'MODAL_OPENED', modal: 'addWord' })}
+              onClick={() =>
+                dispatch({ type: 'MODAL_OPENED', modal: 'addWord' })
+              }
               className="h-10 rounded-xl bg-sky-400 px-3.5 text-xs font-extrabold text-slate-950 transition hover:bg-sky-300 active:scale-95"
             >
               + Слово
@@ -125,10 +112,23 @@ export const DictionaryScreenView: React.FC<DictionaryScreenViewProps> = ({
 
             <button
               type="button"
-              onClick={() => dispatch({ type: 'MODAL_OPENED', modal: 'backup' })}
+              onClick={() =>
+                dispatch({ type: 'MODAL_OPENED', modal: 'backup' })
+              }
               className="h-10 rounded-xl border border-slate-700 bg-slate-800 px-3.5 text-xs font-semibold text-slate-200 transition hover:border-slate-600 hover:bg-slate-700 active:scale-95"
             >
               Бэкап
+            </button>
+
+            <button
+              type="button"
+              aria-label="Сбросить прогресс"
+              onClick={() =>
+                dispatch({ type: 'MODAL_OPENED', modal: 'confirmReset' })
+              }
+              className="h-10 rounded-xl border border-rose-500/35 bg-rose-500/10 px-3 text-xs font-semibold text-rose-300 transition hover:bg-rose-500/20 active:scale-95"
+            >
+              Сброс
             </button>
           </div>
         </div>
@@ -155,7 +155,9 @@ export const DictionaryScreenView: React.FC<DictionaryScreenViewProps> = ({
                 <span>{option.label}</span>
                 <span
                   className={`rounded-full px-1.5 py-0.5 text-[10px] tabular-nums ${
-                    isActive ? 'bg-sky-400/15 text-sky-200' : 'bg-slate-800 text-slate-500'
+                    isActive
+                      ? 'bg-sky-400/15 text-sky-200'
+                      : 'bg-slate-800 text-slate-500'
                   }`}
                 >
                   {option.count}
@@ -168,7 +170,8 @@ export const DictionaryScreenView: React.FC<DictionaryScreenViewProps> = ({
 
       <div className="flex flex-wrap items-center justify-between gap-1 px-0.5 text-xs text-slate-400">
         <span>
-          Показано карточек: <b className="text-slate-200">{visibleWords.length}</b>
+          Показано карточек:{' '}
+          <b className="text-slate-200">{visibleWords.length}</b>
         </span>
         {statusFilter !== 'all' && (
           <button
@@ -187,7 +190,6 @@ export const DictionaryScreenView: React.FC<DictionaryScreenViewProps> = ({
             const record = state.srsMap[item.greek];
             const box = record?.box ?? 0;
             const status = getSrsStatus(box);
-            const { article, word, extra } = splitGreekArticle(item.greek);
             const nextReviewLabel =
               record && status === 'learning'
                 ? srsService.formatNextIntervalLabel(record)
@@ -200,17 +202,8 @@ export const DictionaryScreenView: React.FC<DictionaryScreenViewProps> = ({
               >
                 <div className="flex min-w-0 flex-1 flex-col gap-1.5">
                   <div className="flex flex-wrap items-center gap-1.5">
-                    {article && (
-                      <span
-                        className={`rounded-lg border px-2 py-1 text-xs font-extrabold leading-none ${getArticleBadgeClass(
-                          article,
-                        )}`}
-                      >
-                        {article}
-                      </span>
-                    )}
-                    <h3 className="break-words text-[16px] font-extrabold leading-snug text-white">
-                      {word}
+                    <h3 className="min-w-0 break-words text-[15px] font-bold leading-snug text-white sm:text-[16px]">
+                      {item.greek}
                     </h3>
                     {customGreeks.has(item.greek) && (
                       <span className="rounded-md border border-violet-400/25 bg-violet-400/10 px-1.5 py-0.5 text-[10px] font-bold text-violet-300">
@@ -218,10 +211,6 @@ export const DictionaryScreenView: React.FC<DictionaryScreenViewProps> = ({
                       </span>
                     )}
                   </div>
-
-                  {extra && (
-                    <p className="break-words text-[11px] leading-snug text-slate-500">{extra}</p>
-                  )}
 
                   <div className="flex flex-wrap items-center gap-1.5">
                     {item.grammarHint && (
@@ -263,7 +252,10 @@ export const DictionaryScreenView: React.FC<DictionaryScreenViewProps> = ({
                       aria-label={`Озвучить пример: ${item.example}`}
                       title="Нажми, чтобы озвучить пример"
                     >
-                      <span className="mr-1.5 text-sky-400/70" aria-hidden="true">
+                      <span
+                        className="mr-1.5 text-sky-400/70"
+                        aria-hidden="true"
+                      >
                         🔊
                       </span>
                       {item.example}
@@ -274,7 +266,7 @@ export const DictionaryScreenView: React.FC<DictionaryScreenViewProps> = ({
                 <button
                   type="button"
                   onClick={() => speakGreek(item.greek)}
-                  className="flex w-10 h-10 shrink-0 items-center justify-center rounded-full border border-sky-400/30 bg-sky-400/15 text-sky-400 transition hover:bg-sky-400/25 active:scale-90"
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-sky-400/30 bg-sky-400/15 text-sky-400 transition hover:bg-sky-400/25 active:scale-90"
                   aria-label={`Озвучить слово: ${item.greek}`}
                 >
                   <VolumeOnIcon className="h-4 w-4" />
@@ -287,7 +279,8 @@ export const DictionaryScreenView: React.FC<DictionaryScreenViewProps> = ({
         <div className="rounded-2xl border border-dashed border-slate-700 bg-slate-900/30 px-4 py-10 text-center">
           <p className="text-sm font-bold text-slate-300">Ничего не найдено</p>
           <p className="mx-auto mt-1.5 max-w-sm text-xs leading-relaxed text-slate-500">
-            Попробуй изменить запрос без учёта ударений или выбрать другой SRS-фильтр.
+            Попробуй изменить запрос без учёта ударений или выбрать другой
+            SRS-фильтр.
           </p>
           <button
             type="button"
@@ -298,16 +291,6 @@ export const DictionaryScreenView: React.FC<DictionaryScreenViewProps> = ({
           </button>
         </div>
       )}
-
-      <footer className="mt-2 flex justify-center border-t border-slate-800/80 pt-3">
-        <button
-          type="button"
-          onClick={() => dispatch({ type: 'MODAL_OPENED', modal: 'confirmReset' })}
-          className="min-h-9 rounded-lg px-3 text-[11px] font-semibold text-slate-600 transition hover:bg-rose-500/5 hover:text-rose-400"
-        >
-          ↺ Сбросить прогресс
-        </button>
-      </footer>
     </div>
   );
 };

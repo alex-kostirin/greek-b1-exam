@@ -1,6 +1,12 @@
-import { GroupingMode, NavigationTab, VocabularyItem, WordSrsMap } from '../shared/types/vocabulary';
-import { ActiveModal } from './appState';
+import {
+  GroupingMode,
+  NavigationTab,
+  VocabularyItem,
+  WordSrsMap,
+} from '../shared/types/vocabulary';
 import { EssayUserProgress } from '../shared/types/essay';
+import { UserAppSettings } from '../shared/services/storageService';
+import { ActiveModal } from './appState';
 
 export type AppIntent =
   | { type: 'TAB_SELECTED'; tab: NavigationTab }
@@ -11,7 +17,11 @@ export type AppIntent =
   | { type: 'CARD_GRADED'; isKnown: boolean }
   | { type: 'QUIZ_OPTION_SELECTED'; optionGreek: string }
   | { type: 'QUIZ_NEXT_QUESTION' }
-  | { type: 'MATCH_TILE_CLICKED'; side: 'left' | 'right'; greekKey: string }
+  | {
+      type: 'MATCH_TILE_CLICKED';
+      side: 'left' | 'right';
+      greekKey: string;
+    }
   | { type: 'MATCH_MISMATCH_CLEARED' }
   | { type: 'MATCH_NEW_ROUND' }
   | { type: 'SEARCH_QUERY_CHANGED'; query: string }
@@ -35,6 +45,7 @@ export type AppIntent =
       srsMap: WordSrsMap;
       customWords: VocabularyItem[];
       essayProgress?: EssayUserProgress;
+      settings?: Partial<UserAppSettings>;
     }
   | { type: 'GROUPING_MODE_TOGGLED'; mode: GroupingMode }
   | { type: 'CLICK_CHAPTER_SELECTED'; chapter: number | null }

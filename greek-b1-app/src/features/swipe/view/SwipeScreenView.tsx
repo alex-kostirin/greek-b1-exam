@@ -1,6 +1,5 @@
 import React from 'react';
 import { AppIntent } from '../../../model/appIntent';
-import { splitGreekArticle } from '../../../model/appSelectors';
 import { AppState } from '../../../model/appState';
 import { srsService } from '../../../shared/services/srsService';
 import { MASTERY_THRESHOLD } from '../../../shared/types/vocabulary';
@@ -17,62 +16,6 @@ interface SwipeScreenViewProps {
   dispatch: (intent: AppIntent) => void;
   speakGreek: (text: string) => void;
 }
-
-type GreekArticle = 'ο' | 'η' | 'το' | 'οι' | 'τα';
-
-const getArticleBadgeClass = (article: GreekArticle): string => {
-  if (article === 'ο' || article === 'οι') {
-    return 'border-sky-400/40 bg-sky-500/20 text-sky-300';
-  }
-  if (article === 'η') {
-    return 'border-pink-400/40 bg-pink-500/20 text-pink-300';
-  }
-  return 'border-amber-400/40 bg-amber-500/20 text-amber-300';
-};
-
-interface GreekWordViewProps {
-  greek: string;
-  variant: 'prompt' | 'answer';
-}
-
-const GreekWordView: React.FC<GreekWordViewProps> = ({ greek, variant }) => {
-  const { article, word, extra } = splitGreekArticle(greek);
-  const isPrompt = variant === 'prompt';
-
-  return (
-    <div className="flex max-w-full select-text flex-col items-center">
-      <div className="flex max-w-full flex-wrap items-center justify-center gap-x-2 gap-y-1.5">
-        {article && (
-          <span
-            className={`inline-flex shrink-0 items-center rounded-lg border px-2 py-1 font-extrabold leading-none ${getArticleBadgeClass(
-              article,
-            )} ${isPrompt ? 'text-base sm:text-lg' : 'text-sm'}`}
-          >
-            {article}
-          </span>
-        )}
-        <span
-          className={`max-w-full break-words font-extrabold leading-tight ${
-            isPrompt
-              ? 'text-3xl text-white sm:text-4xl'
-              : 'text-xl text-teal-300 sm:text-2xl'
-          }`}
-        >
-          {word}
-        </span>
-      </div>
-      {extra && (
-        <div
-          className={`mt-1.5 max-w-full break-words font-medium leading-snug text-slate-400 ${
-            isPrompt ? 'text-xs sm:text-sm' : 'text-[11px]'
-          }`}
-        >
-          {extra}
-        </div>
-      )}
-    </div>
-  );
-};
 
 export const SwipeScreenView: React.FC<SwipeScreenViewProps> = ({
   state,
@@ -215,53 +158,66 @@ export const SwipeScreenView: React.FC<SwipeScreenViewProps> = ({
             )}
           </div>
 
-          <div className="flex min-h-[104px] w-full flex-1 items-center justify-center px-1 py-2.5">
-            {state.directionGreekToRussian ? (
-              <GreekWordView greek={currentCard.greek} variant="prompt" />
-            ) : (
-              <div className="max-w-full select-text break-words text-3xl font-extrabold leading-tight text-white sm:text-4xl">
-                {currentCard.russian}
-              </div>
-            )}
-          </div>
+          <div
+            key={state.isCardRevealed ? 'card-revealed' : 'card-concealed'}
+            className="animate-card-flip my-auto flex min-h-0 w-full flex-col items-center justify-center gap-2 py-2"
+          >
+            <div
+              className={`flex w-full items-center justify-center px-1 transition-[padding] duration-200 ${
+                state.isCardRevealed ? 'py-0.5' : 'min-h-[104px] py-2.5'
+              }`}
+            >
+              {state.directionGreekToRussian ? (
+                <div className="max-w-full select-text text-3xl font-extrabold leading-tight text-white break-words sm:text-4xl">
+                  {currentCard.greek}
+                </div>
+              ) : (
+                <div className="max-w-full select-text break-words text-3xl font-extrabold leading-tight text-white sm:text-4xl">
+                  {currentCard.russian}
+                </div>
+              )}
+            </div>
 
-          <div className="flex h-[175px] min-h-[175px] w-full shrink-0 flex-col items-center justify-center">
-            {state.isCardRevealed ? (
-              <div className="animate-fade-up flex w-full flex-col items-center gap-1.5">
-                {state.directionGreekToRussian ? (
-                  <div className="max-w-full select-text break-words text-xl font-bold leading-snug text-teal-300">
-                    {currentCard.russian}
-                  </div>
-                ) : (
-                  <GreekWordView greek={currentCard.greek} variant="answer" />
-                )}
+            <div className="flex w-full shrink-0 flex-col items-center justify-center">
+              {state.isCardRevealed ? (
+                <div className="animate-fade-up flex w-full flex-col items-center gap-2">
+                  {state.directionGreekToRussian ? (
+                    <div className="max-w-full select-text break-words text-lg font-bold leading-snug text-teal-300 sm:text-xl">
+                      {currentCard.russian}
+                    </div>
+                  ) : (
+                    <div className="max-w-full select-text break-words text-xl font-extrabold leading-tight text-teal-300 sm:text-2xl">
+                      {currentCard.greek}
+                    </div>
+                  )}
 
-                {currentCard.grammarHint && (
-                  <div className="rounded-lg bg-amber-500/15 px-2.5 py-0.5 text-[11px] font-semibold leading-relaxed text-amber-400">
-                    {currentCard.grammarHint}
-                  </div>
-                )}
+                  {currentCard.grammarHint && (
+                    <div className="rounded-lg bg-amber-500/15 px-2.5 py-0.5 text-[11px] font-semibold leading-relaxed text-amber-400">
+                      {currentCard.grammarHint}
+                    </div>
+                  )}
 
-                <CardIllustrationView item={currentCard} compact />
+                  <CardIllustrationView item={currentCard} compact />
 
-                <button
-                  type="button"
-                  aria-label="Произнести греческий пример"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    speakGreek(currentCard.example);
-                  }}
-                  className="flex w-full items-center gap-2 rounded-xl border-l-[3px] border-sky-400 bg-[#0a131f]/85 px-3 py-2 text-left text-[12px] leading-snug text-slate-200 transition hover:text-white"
-                >
-                  <VolumeOnIcon className="h-4 w-4 shrink-0 text-sky-400" />
-                  <span className="select-text">{currentCard.example}</span>
-                </button>
-              </div>
-            ) : (
-              <div className="inline-flex items-center justify-center rounded-full border border-slate-700/70 bg-slate-900/45 px-4 py-2 text-[11px] font-medium text-slate-400">
-                Показать перевод и ассоциацию 👆
-              </div>
-            )}
+                  <button
+                    type="button"
+                    aria-label="Произнести греческий пример"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      speakGreek(currentCard.example);
+                    }}
+                    className="flex w-full items-center gap-2 rounded-xl border-l-[3px] border-sky-400 bg-[#0a131f]/85 px-3 py-2 text-left text-[12px] leading-snug text-slate-200 transition hover:text-white"
+                  >
+                    <VolumeOnIcon className="h-4 w-4 shrink-0 text-sky-400" />
+                    <span className="select-text">{currentCard.example}</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="inline-flex items-center justify-center rounded-full border border-slate-700/70 bg-slate-900/45 px-4 py-2 text-[11px] font-medium text-slate-400">
+                  Тапни для перевода и ассоциации 👆
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
