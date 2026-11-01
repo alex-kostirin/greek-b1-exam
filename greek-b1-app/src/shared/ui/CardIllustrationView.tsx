@@ -265,7 +265,7 @@ interface CardIllustrationViewProps {
 export const CardIllustrationView: React.FC<CardIllustrationViewProps> = ({
   item,
   compact = false,
-  showCaption = true,
+  showCaption = false,
 }) => {
   const scene = resolveWordVisualScene(item);
   const captionVisible =
