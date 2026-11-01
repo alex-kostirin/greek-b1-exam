@@ -3,6 +3,7 @@ import { generateQuizQuestion } from '../features/quiz/model/quizGenerator';
 import { srsService } from '../shared/services/srsService';
 import { storageService } from '../shared/services/storageService';
 import { VocabularyItem, WordSrsMap } from '../shared/types/vocabulary';
+import { EssayUserProgress } from '../shared/types/essay';
 import { AppIntent } from './appIntent';
 import {
   CUSTOM_WORDS_MODULE,
@@ -14,7 +15,8 @@ import { AppState } from './appState';
 
 export function createInitialAppState(
   initialSrsMap: WordSrsMap,
-  initialCustomWords: VocabularyItem[]
+  initialCustomWords: VocabularyItem[],
+  initialEssayProgress: EssayUserProgress = { pinnedIds: [], completedIds: [], hintLevels: {} }
 ): AppState {
   const groupingMode = 'exam';
   const activeClickChapter = null;
@@ -45,6 +47,7 @@ export function createInitialAppState(
     activeModal: 'none',
     groupingMode,
     activeClickChapter,
+    essayProgress: initialEssayProgress,
   };
 }
 
@@ -357,10 +360,15 @@ export function appReducer(state: AppState, intent: AppIntent): AppState {
         ...state.customWords,
         ...intent.customWords.filter((item) => !existingGreeks.has(item.greek)),
       ];
+      const mergedEssayProgress = storageService.mergeEssayProgress(
+        state.essayProgress,
+        intent.essayProgress
+      );
       return {
         ...state,
         srsMap: mergedSrs,
         customWords: mergedCustom,
+        essayProgress: mergedEssayProgress,
         activeModal: 'none',
       };
     }
@@ -370,6 +378,7 @@ export function appReducer(state: AppState, intent: AppIntent): AppState {
         ...state,
         srsMap: {},
         streakCount: 0,
+        essayProgress: { pinnedIds: [], completedIds: [], hintLevels: {} },
         activeModal: 'none',
       };
 
@@ -380,10 +389,15 @@ export function appReducer(state: AppState, intent: AppIntent): AppState {
         ...state.customWords,
         ...intent.customWords.filter((item) => !existingGreeks.has(item.greek)),
       ];
+      const mergedEssayProgress = storageService.mergeEssayProgress(
+        state.essayProgress,
+        intent.essayProgress
+      );
       return {
         ...state,
         srsMap: mergedSrs,
         customWords: mergedCustom,
+        essayProgress: mergedEssayProgress,
       };
     }
 
@@ -436,5 +450,66 @@ export function appReducer(state: AppState, intent: AppIntent): AppState {
         matchBoard: generateMatchBoard(pool),
       };
     }
+
+    case 'ESSAY_PIN_TOGGLED': {
+      const pinnedIds = state.essayProgress.pinnedIds;
+      const isPinned = pinnedIds.includes(intent.topicId);
+      const updatedPinned = isPinned
+        ? pinnedIds.filter(id => id !== intent.topicId)
+        : [...pinnedIds, intent.topicId];
+      return {
+        ...state,
+        essayProgress: {
+          ...state.essayProgress,
+          pinnedIds: updatedPinned,
+        },
+      };
+    }
+
+    case 'ESSAY_COMPLETED_TOGGLED': {
+      const completedIds = state.essayProgress.completedIds;
+      const isCompleted = completedIds.includes(intent.topicId);
+      const updatedCompleted = isCompleted
+        ? completedIds.filter(id => id !== intent.topicId)
+        : [...completedIds, intent.topicId];
+      return {
+        ...state,
+        essayProgress: {
+          ...state.essayProgress,
+          completedIds: updatedCompleted,
+        },
+      };
+    }
+
+    case 'ESSAY_HINT_STEP_ADVANCED': {
+      const currentLevel = state.essayProgress.hintLevels[intent.topicId] ?? 0;
+      const nextLevel = (currentLevel + 1) % 5;
+      return {
+        ...state,
+        essayProgress: {
+          ...state.essayProgress,
+          hintLevels: {
+            ...state.essayProgress.hintLevels,
+            [intent.topicId]: nextLevel,
+          },
+        },
+      };
+    }
+
+    case 'ESSAY_HINT_LEVEL_SET': {
+      return {
+        ...state,
+        essayProgress: {
+          ...state.essayProgress,
+          hintLevels: {
+            ...state.essayProgress.hintLevels,
+            [intent.topicId]: intent.level,
+          },
+        },
+      };
+    }
+
+    default:
+      return state;
   }
 }

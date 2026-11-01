@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavigationTab } from '../types/vocabulary';
-import { BoltTabIcon, BookTabIcon, CardsTabIcon, GridTabIcon } from './Icons';
+import { BoltTabIcon, BookTabIcon, CardsTabIcon, GridTabIcon, PenTabIcon } from './Icons';
 
 interface BottomNavigationViewProps {
   activeTab: NavigationTab;
@@ -32,6 +32,11 @@ const NAVIGATION_ITEMS: {
     label: 'Словарь',
     renderIcon: (className) => <BookTabIcon className={className} />,
   },
+  {
+    id: 'essays',
+    label: 'Сочинения',
+    renderIcon: (className) => <PenTabIcon className={className} />,
+  },
 ];
 
 export const BottomNavigationView: React.FC<BottomNavigationViewProps> = ({
@@ -39,7 +44,7 @@ export const BottomNavigationView: React.FC<BottomNavigationViewProps> = ({
   onSelectTab,
 }) => {
   return (
-    <nav className="bg-[#0b1120]/98 border-t border-slate-800/80 grid grid-cols-4 gap-1 px-2 pt-1.5 pb-[calc(6px+env(safe-area-inset-bottom,10px))] z-20 shrink-0">
+    <nav className="bg-[#0b1120]/98 border-t border-slate-800/80 grid grid-cols-5 gap-1 px-2 pt-1.5 pb-[calc(6px+env(safe-area-inset-bottom,10px))] z-20 shrink-0">
       {NAVIGATION_ITEMS.map((item) => {
         const isActive = item.id === activeTab;
         return (

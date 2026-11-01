@@ -163,6 +163,54 @@ export const BookTabIcon: React.FC<IconProps> = ({ className = 'w-5 h-5' }) => (
   </svg>
 );
 
+export const PenTabIcon: React.FC<IconProps> = ({ className = 'w-5 h-5' }) => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+  >
+    <path d="M14 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+    <path d="m16.5 3.5 4 4L12 16l-5 1 1-5 8.5-8.5z" />
+    <path d="m14.5 5.5 4 4" />
+  </svg>
+);
+
+export const PinIcon: React.FC<IconProps> = ({ className = 'w-4 h-4' }) => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+  >
+    <path d="M12 17v5" />
+    <path d="M8 3h8l-1 6 3 3v2H6v-2l3-3-1-6z" />
+    <path d="M9 9h6" />
+  </svg>
+);
+
+export const LightbulbIcon: React.FC<IconProps> = ({ className = 'w-4 h-4' }) => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+  >
+    <path d="M9 18h6" />
+    <path d="M10 22h4" />
+    <path d="M12 2a6 6 0 0 0-4 10.47c.59.52 1 1.25 1 2.03V15h6v-.5c0-.78.41-1.51 1-2.03A6 6 0 0 0 12 2z" />
+  </svg>
+);
+
 export const SearchIcon: React.FC<IconProps> = ({ className = 'w-4 h-4' }) => (
   <svg
     viewBox="0 0 24 24"

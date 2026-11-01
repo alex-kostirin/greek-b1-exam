@@ -4,6 +4,7 @@ import {
   WordSrsMap,
   WordSrsRecord,
 } from '../types/vocabulary';
+import { EssayUserProgress } from '../types/essay';
 import { computeWordHash } from './hashService';
 import { telegramService } from './telegramService';
 
@@ -12,6 +13,8 @@ const LEGACY_STATUS_STORAGE_KEY = 'ucy_b1_status_v2';
 const CUSTOM_VOCAB_STORAGE_KEY = 'ucy_b1_custom_v1';
 const CLOUD_SRS_KEY = 'ucy_b1_cloud_srs_v3';
 const LEGACY_CLOUD_STATUS_KEY = 'ucy_b1_cloud_v1';
+const ESSAY_STORAGE_KEY = 'ucy_b1_essays_v1';
+const CLOUD_ESSAY_KEY = 'ucy_b1_cloud_essays_v1';
 
 interface RawLegacyVocabItem {
   m?: string;
@@ -95,10 +98,32 @@ export const storageService = {
     }
   },
 
+  loadLocalEssayProgress(): EssayUserProgress {
+    try {
+      const raw = localStorage.getItem(ESSAY_STORAGE_KEY);
+      if (raw) {
+        return JSON.parse(raw) as EssayUserProgress;
+      }
+      return { pinnedIds: [], completedIds: [], hintLevels: {} };
+    } catch {
+      return { pinnedIds: [], completedIds: [], hintLevels: {} };
+    }
+  },
+
+  mergeEssayProgress(local: EssayUserProgress, incoming?: EssayUserProgress): EssayUserProgress {
+    if (!incoming) return local;
+    return {
+      pinnedIds: [...new Set([...local.pinnedIds, ...incoming.pinnedIds])],
+      completedIds: [...new Set([...local.completedIds, ...incoming.completedIds])],
+      hintLevels: { ...local.hintLevels, ...incoming.hintLevels },
+    };
+  },
+
   persistState(
     srsMap: WordSrsMap,
     customWords: VocabularyItem[],
-    allVocabulary: VocabularyItem[]
+    allVocabulary: VocabularyItem[],
+    essayProgress?: EssayUserProgress
   ): void {
     const legacyCompatibleCustom = customWords.map((item) => ({
       m: item.module,
@@ -111,6 +136,9 @@ export const storageService = {
     try {
       localStorage.setItem(SRS_STORAGE_KEY, JSON.stringify(srsMap));
       localStorage.setItem(CUSTOM_VOCAB_STORAGE_KEY, JSON.stringify(legacyCompatibleCustom));
+      if (essayProgress) {
+        localStorage.setItem(ESSAY_STORAGE_KEY, JSON.stringify(essayProgress));
+      }
     } catch {
       return;
     }
@@ -136,6 +164,9 @@ export const storageService = {
         CUSTOM_VOCAB_STORAGE_KEY,
         JSON.stringify(legacyCompatibleCustom.slice(0, 40))
       );
+      if (essayProgress) {
+        cloud.setItem(CLOUD_ESSAY_KEY, JSON.stringify(essayProgress));
+      }
     } catch {
       return;
     }
@@ -143,14 +174,14 @@ export const storageService = {
 
   fetchCloudState(
     baseVocabulary: VocabularyItem[],
-    onHydrate: (payload: { srsMap: WordSrsMap; customWords: VocabularyItem[] }) => void
+    onHydrate: (payload: { srsMap: WordSrsMap; customWords: VocabularyItem[]; essayProgress?: EssayUserProgress }) => void
   ): void {
     const cloud = telegramService.getCloudStorage();
     if (!cloud) return;
 
     try {
       cloud.getItems(
-        [CLOUD_SRS_KEY, LEGACY_CLOUD_STATUS_KEY, CUSTOM_VOCAB_STORAGE_KEY],
+        [CLOUD_SRS_KEY, LEGACY_CLOUD_STATUS_KEY, CUSTOM_VOCAB_STORAGE_KEY, CLOUD_ESSAY_KEY],
         (error, values) => {
           if (error || !values) return;
 
@@ -227,8 +258,17 @@ export const storageService = {
             }
           }
 
-          if (Object.keys(hydratedSrs).length > 0 || cloudCustomWords.length > 0) {
-            onHydrate({ srsMap: hydratedSrs, customWords: cloudCustomWords });
+          let essayProgress: EssayUserProgress | undefined;
+          if (values[CLOUD_ESSAY_KEY]) {
+            try {
+              essayProgress = JSON.parse(values[CLOUD_ESSAY_KEY]) as EssayUserProgress;
+            } catch {
+              essayProgress = undefined;
+            }
+          }
+
+          if (Object.keys(hydratedSrs).length > 0 || cloudCustomWords.length > 0 || essayProgress) {
+            onHydrate({ srsMap: hydratedSrs, customWords: cloudCustomWords, essayProgress });
           }
         }
       );
@@ -237,7 +277,7 @@ export const storageService = {
     }
   },
 
-  encodeBackupCode(srsMap: WordSrsMap, customWords: VocabularyItem[]): string {
+  encodeBackupCode(srsMap: WordSrsMap, customWords: VocabularyItem[], essayProgress?: EssayUserProgress): string {
     const legacyCompatibleCustom = customWords.map((item) => ({
       m: item.module,
       g: item.greek,
@@ -245,18 +285,23 @@ export const storageService = {
       r: item.russian,
       e: item.example,
     }));
-    const rawJson = JSON.stringify({ srs: srsMap, c: legacyCompatibleCustom });
+    const payload: any = { srs: srsMap, c: legacyCompatibleCustom };
+    if (essayProgress) {
+      payload.essays = essayProgress;
+    }
+    const rawJson = JSON.stringify(payload);
     return btoa(unescape(encodeURIComponent(rawJson)));
   },
 
   decodeBackupCode(
     code: string
-  ): { srsMap: WordSrsMap; customWords: VocabularyItem[] } | null {
+  ): { srsMap: WordSrsMap; customWords: VocabularyItem[]; essayProgress?: EssayUserProgress } | null {
     try {
       const decoded = JSON.parse(decodeURIComponent(escape(atob(code.trim())))) as {
         srs?: WordSrsMap;
         s?: Record<string, string>;
         c?: RawLegacyVocabItem[];
+        essays?: EssayUserProgress;
       };
       if (!decoded || typeof decoded !== 'object') return null;
 
@@ -269,6 +314,7 @@ export const storageService = {
       return {
         srsMap,
         customWords: Array.isArray(decoded.c) ? normalizeCustomItems(decoded.c) : [],
+        essayProgress: decoded.essays,
       };
     } catch {
       return null;

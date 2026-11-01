@@ -20,4 +20,4 @@ export interface VocabularyItem {
 
 export type GroupingMode = 'exam' | 'click';
 
-export type NavigationTab = 'swipe' | 'quiz' | 'match' | 'list';
+export type NavigationTab = 'swipe' | 'quiz' | 'match' | 'list' | 'essays';

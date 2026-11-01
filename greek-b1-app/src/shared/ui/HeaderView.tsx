@@ -18,6 +18,7 @@ interface HeaderViewProps {
 
 export const HeaderView: React.FC<HeaderViewProps> = ({ state, dispatch }) => {
   const stats = selectVocabularyStats(state);
+  const showVocabularyControls = state.activeTab !== 'essays';
 
   return (
     <header className="px-3.5 pt-2.5 pb-2 bg-[#0b1120]/95 border-b border-slate-800/80 flex flex-col gap-2 z-20 shrink-0">
@@ -69,41 +70,47 @@ export const HeaderView: React.FC<HeaderViewProps> = ({ state, dispatch }) => {
         </div>
       </div>
 
-      <div className="flex items-center justify-between text-[11px] text-slate-400 gap-2.5">
-        <span className="inline-flex items-center gap-1 shrink-0 leading-none">
-          <CheckCircleIcon className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-          <span>Выучено:</span>
-          <b className="text-emerald-400">{stats.masteredCount}</b>
-        </span>
+      {showVocabularyControls && (
+        <>
+          <div className="flex items-center justify-between text-[11px] text-slate-400 gap-2.5">
+            <span className="inline-flex items-center gap-1 shrink-0 leading-none">
+              <CheckCircleIcon className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+              <span>Выучено:</span>
+              <b className="text-emerald-400">{stats.masteredCount}</b>
+            </span>
 
-        <div className="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden flex">
-          <div
-            className="bg-emerald-500 h-full transition-all duration-300"
-            style={{ width: `${stats.masteredPercent.toFixed(1)}%` }}
+            <div className="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden flex">
+              <div
+                className="bg-emerald-500 h-full transition-all duration-300"
+                style={{ width: `${stats.masteredPercent.toFixed(1)}%` }}
+              />
+              <div
+                className="bg-amber-500 h-full transition-all duration-300"
+                style={{ width: `${stats.learningPercent.toFixed(1)}%` }}
+              />
+            </div>
+
+            <span className="inline-flex items-center gap-1 shrink-0 leading-none">
+              <span>Учу:</span>
+              <b className="text-amber-400">{stats.learningCount}</b>
+              <span className="text-slate-600">/</span>
+              <b className="text-slate-300">{stats.totalCount}</b>
+            </span>
+          </div>
+
+          <ModuleSelectorView
+            activeModule={state.activeModule}
+            customWords={state.customWords}
+            groupingMode={state.groupingMode}
+            activeClickChapter={state.activeClickChapter}
+            onSelectModule={(module) => dispatch({ type: 'MODULE_SELECTED', module })}
+            onToggleGroupingMode={(mode) => dispatch({ type: 'GROUPING_MODE_TOGGLED', mode })}
+            onSelectClickChapter={(chapter) =>
+              dispatch({ type: 'CLICK_CHAPTER_SELECTED', chapter })
+            }
           />
-          <div
-            className="bg-amber-500 h-full transition-all duration-300"
-            style={{ width: `${stats.learningPercent.toFixed(1)}%` }}
-          />
-        </div>
-
-        <span className="inline-flex items-center gap-1 shrink-0 leading-none">
-          <span>Учу:</span>
-          <b className="text-amber-400">{stats.learningCount}</b>
-          <span className="text-slate-600">/</span>
-          <b className="text-slate-300">{stats.totalCount}</b>
-        </span>
-      </div>
-
-      <ModuleSelectorView
-        activeModule={state.activeModule}
-        customWords={state.customWords}
-        groupingMode={state.groupingMode}
-        activeClickChapter={state.activeClickChapter}
-        onSelectModule={(module) => dispatch({ type: 'MODULE_SELECTED', module })}
-        onToggleGroupingMode={(mode) => dispatch({ type: 'GROUPING_MODE_TOGGLED', mode })}
-        onSelectClickChapter={(chapter) => dispatch({ type: 'CLICK_CHAPTER_SELECTED', chapter })}
-      />
+        </>
+      )}
     </header>
   );
 };

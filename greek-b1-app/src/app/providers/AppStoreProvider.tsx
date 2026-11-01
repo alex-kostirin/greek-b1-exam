@@ -23,7 +23,8 @@ export const AppStoreProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     () =>
       createInitialAppState(
         storageService.loadLocalSrsMap(),
-        storageService.loadLocalCustomWords()
+        storageService.loadLocalCustomWords(),
+        storageService.loadLocalEssayProgress()
       )
   );
 
@@ -34,14 +35,15 @@ export const AppStoreProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         type: 'CLOUD_STATE_HYDRATED',
         srsMap: cloudPayload.srsMap,
         customWords: cloudPayload.customWords,
+        essayProgress: cloudPayload.essayProgress,
       });
     });
   }, []);
 
   useEffect(() => {
     const allVocabulary = selectAllVocabulary(state.customWords);
-    storageService.persistState(state.srsMap, state.customWords, allVocabulary);
-  }, [state.srsMap, state.customWords]);
+    storageService.persistState(state.srsMap, state.customWords, allVocabulary, state.essayProgress);
+  }, [state.srsMap, state.customWords, state.essayProgress]);
 
   useEffect(() => {
     if (!state.autoTtsEnabled || !state.directionGreekToRussian) return;
@@ -123,6 +125,9 @@ export const AppStoreProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           break;
         case 'CUSTOM_WORD_ADDED':
         case 'BACKUP_RESTORED':
+          telegramService.triggerHaptic('success');
+          break;
+        case 'ESSAY_COMPLETED_TOGGLED':
           telegramService.triggerHaptic('success');
           break;
         default:

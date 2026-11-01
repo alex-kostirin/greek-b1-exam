@@ -3,6 +3,7 @@ import { AddWordModalView } from '../features/dictionary/view/AddWordModalView';
 import { BackupModalView } from '../features/dictionary/view/BackupModalView';
 import { ConfirmResetModalView } from '../features/dictionary/view/ConfirmResetModalView';
 import { DictionaryScreenView } from '../features/dictionary/view/DictionaryScreenView';
+import { EssaysScreenView } from '../features/essays/view/EssaysScreenView';
 import { MatchScreenView } from '../features/match/view/MatchScreenView';
 import { QuizScreenView } from '../features/quiz/view/QuizScreenView';
 import { SwipeScreenView } from '../features/swipe/view/SwipeScreenView';
@@ -17,7 +18,11 @@ export const App: React.FC = () => {
     <div className="h-dvh w-full flex flex-col bg-[#0b1120] text-slate-50 overflow-hidden select-none">
       <HeaderView state={state} dispatch={dispatch} />
 
-      <main className="flex-1 flex flex-col justify-center px-3.5 py-2.5 relative overflow-y-auto overflow-x-hidden min-h-0">
+      <main
+        className={`flex-1 flex flex-col ${
+          state.activeTab === 'essays' ? 'justify-start' : 'justify-center'
+        } px-3.5 py-2.5 relative overflow-y-auto overflow-x-hidden min-h-0`}
+      >
         {state.activeTab === 'swipe' && (
           <SwipeScreenView state={state} dispatch={dispatch} speakGreek={speakGreek} />
         )}
@@ -33,6 +38,9 @@ export const App: React.FC = () => {
             dispatch={dispatch}
             speakGreek={speakGreek}
           />
+        )}
+        {state.activeTab === 'essays' && (
+          <EssaysScreenView state={state} dispatch={dispatch} speakGreek={speakGreek} />
         )}
       </main>
 

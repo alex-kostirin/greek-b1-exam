@@ -1,5 +1,6 @@
 import { GroupingMode, NavigationTab, VocabularyItem, WordSrsMap } from '../shared/types/vocabulary';
 import { ActiveModal } from './appState';
+import { EssayUserProgress } from '../shared/types/essay';
 
 export type AppIntent =
   | { type: 'TAB_SELECTED'; tab: NavigationTab }
@@ -26,12 +27,18 @@ export type AppIntent =
       type: 'BACKUP_RESTORED';
       srsMap: WordSrsMap;
       customWords: VocabularyItem[];
+      essayProgress?: EssayUserProgress;
     }
   | { type: 'PROGRESS_RESET_CONFIRMED' }
   | {
       type: 'CLOUD_STATE_HYDRATED';
       srsMap: WordSrsMap;
       customWords: VocabularyItem[];
+      essayProgress?: EssayUserProgress;
     }
   | { type: 'GROUPING_MODE_TOGGLED'; mode: GroupingMode }
-  | { type: 'CLICK_CHAPTER_SELECTED'; chapter: number | null };
+  | { type: 'CLICK_CHAPTER_SELECTED'; chapter: number | null }
+  | { type: 'ESSAY_PIN_TOGGLED'; topicId: string }
+  | { type: 'ESSAY_COMPLETED_TOGGLED'; topicId: string }
+  | { type: 'ESSAY_HINT_STEP_ADVANCED'; topicId: string }
+  | { type: 'ESSAY_HINT_LEVEL_SET'; topicId: string; level: number };
