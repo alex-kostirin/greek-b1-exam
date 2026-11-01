@@ -5,3 +5,7 @@ greek-b1-app/dist/
 *.log
 
 *.tsbuildinfo
+.env
+.env.local
+.agents/scratch/
+
