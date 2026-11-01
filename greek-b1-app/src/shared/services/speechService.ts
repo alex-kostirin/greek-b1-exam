@@ -61,7 +61,7 @@ async function playFromUrlSequence(urls: string[], text: string, index: number =
 
   try {
     const audio = new Audio();
-    audio.referrerPolicy = 'no-referrer';
+    audio.setAttribute('referrerpolicy', 'no-referrer');
     audio.preload = 'auto';
     audio.src = targetUrl;
     activeAudio = audio;
