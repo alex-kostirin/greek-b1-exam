@@ -14,6 +14,10 @@ const BOX_INTERVALS_MS: Record<number, number> = {
 
 const LAPSE_PENALTY_INTERVAL_MS = 1 * MINUTE_MS;
 
+// Константы для алгоритма pickNextSmartCard
+const RECENT_WINDOW_SIZE = 12; // Увеличенное окно исключения недавних слов
+const INTERLEAVING_RATIO = 0.75; // 75% Due / 25% New
+
 export const srsService = {
   gradeWord(
     currentRecord: WordSrsRecord | undefined,
@@ -74,6 +78,22 @@ export const srsService = {
     return `Повтор через ${days} дн`;
   },
 
+  /**
+   * Выбирает следующую карточку для показа на основе сессионного алгоритма
+   * с жестким запретом раннего показа карточек на кулдауне.
+   *
+   * Приоритеты:
+   * 1. urgentLearningDue – слова с ошибками (lapses > 0 или box === 0), у которых наступил срок (1 минута).
+   *    Исключает выученные (mastered) слова.
+   * 2. reviewDue – созревшие карточки (box >= 1 и now >= nextReviewAt), включая выученные (mastered),
+   *    сортируемые по давности просрочки, но с приоритетом недоученных перед выученными.
+   * 3. newCards – новые неизученные слова.
+   * 4. coolingCards – слова, интервал которых еще не наступил (now < nextReviewAt) – только fallback.
+   *
+   * Микширование: 75% Due / 25% New (чередование созревших и новых).
+   * Fallback: если все слова на кулдауне, выбирается слово с самым давним просмотром,
+   * исключая только что свайпнутое (самое последнее) слово, если в пуле есть другие варианты.
+   */
   pickNextSmartCard(
     candidates: VocabularyItem[],
     srsMap: WordSrsMap,
@@ -87,51 +107,142 @@ export const srsService = {
       return candidates[0];
     }
 
-    const recentSet = new Set(recentGreeks.slice(-5));
+    // Исключаем недавние слова (увеличенное окно до 12)
+    const recentSet = new Set(recentGreeks.slice(-RECENT_WINDOW_SIZE));
     const nonRecent = candidates.filter((item) => !recentSet.has(item.greek));
     const pool = nonRecent.length > 0 ? nonRecent : candidates;
 
-    const weightedPool: { item: VocabularyItem; weight: number }[] = pool.map((item) => {
+    // Разделяем на очереди
+    const urgentLearningDue: VocabularyItem[] = [];
+    const reviewDue: VocabularyItem[] = [];
+    const newCards: VocabularyItem[] = [];
+    const coolingCards: VocabularyItem[] = [];
+
+    for (const item of pool) {
       const record = srsMap[item.greek];
 
+      // Новые слова (без записи)
       if (!record) {
-        return { item, weight: 35 + Math.random() * 25 };
+        newCards.push(item);
+        continue;
       }
 
       const isOverdue = now >= record.nextReviewAt;
       const isMastered = record.box >= MASTERY_THRESHOLD;
 
-      if (record.box === 0 && record.lapses > 0) {
-        return {
-          item,
-          weight: (isOverdue ? 140 : 75) + record.lapses * 20 + Math.random() * 20,
-        };
+      // Срочное обучение: ошибки или box 0, и срок наступил, но не выученные
+      if ((record.lapses > 0 || record.box === 0) && isOverdue && !isMastered) {
+        urgentLearningDue.push(item);
+        continue;
       }
 
-      if (record.box === 0) {
-        return {
-          item,
-          weight: (isOverdue ? 110 : 55) + Math.random() * 20,
-        };
+      // Созревшие для повторения: box >= 1 и срок наступил (включая выученные)
+      if (record.box >= 1 && isOverdue) {
+        reviewDue.push(item);
+        continue;
       }
 
-      if (!isMastered) {
-        const boxUrgency = (MASTERY_THRESHOLD - record.box) * 15;
-        return {
-          item,
-          weight: (isOverdue ? 90 + boxUrgency : 25 + boxUrgency * 0.5) + Math.random() * 15,
-        };
+      // Все остальные (на кулдауне или mastered, но срок не наступил)
+      coolingCards.push(item);
+    }
+
+    // Сортируем reviewDue: сначала недоученные, затем выученные;
+    // внутри каждой группы – по убыванию просрочки (чем дольше просрочено, тем выше приоритет)
+    reviewDue.sort((a, b) => {
+      const recordA = srsMap[a.greek]!;
+      const recordB = srsMap[b.greek]!;
+      const masteredA = recordA.box >= MASTERY_THRESHOLD;
+      const masteredB = recordB.box >= MASTERY_THRESHOLD;
+
+      // Приоритет: недоученные (false) идут раньше выученных (true)
+      if (masteredA !== masteredB) {
+        return masteredA ? 1 : -1;
       }
 
-      return {
-        item,
-        weight: (isOverdue ? 30 : 3) + Math.random() * 5,
-      };
+      const overdueA = now - recordA.nextReviewAt;
+      const overdueB = now - recordB.nextReviewAt;
+      return overdueB - overdueA;
     });
 
-    weightedPool.sort((a, b) => b.weight - a.weight);
-    const topSliceCount = Math.min(4, weightedPool.length);
-    const randomTopIndex = Math.floor(Math.random() * topSliceCount);
-    return weightedPool[randomTopIndex].item;
+    // Сортируем coolingCards по давности последнего просмотра (для fallback)
+    coolingCards.sort((a, b) => {
+      const recordA = srsMap[a.greek];
+      const recordB = srsMap[b.greek];
+      const lastA = recordA?.lastReviewedAt ?? 0;
+      const lastB = recordB?.lastReviewedAt ?? 0;
+      return lastA - lastB; // сначала самые давние
+    });
+
+    // Функция случайного выбора из топ‑3 наиболее просроченных слов в reviewDue
+    const pickFromReviewDue = (): VocabularyItem | null => {
+      if (reviewDue.length === 0) return null;
+      const topThree = reviewDue.slice(0, 3);
+      const randomIndex = Math.floor(Math.random() * topThree.length);
+      return topThree[randomIndex];
+    };
+
+    // 1. Приоритет: urgentLearningDue
+    if (urgentLearningDue.length > 0) {
+      return urgentLearningDue[Math.floor(Math.random() * urgentLearningDue.length)];
+    }
+
+    // 2. Микширование reviewDue и newCards (75% / 25%)
+    const hasReviewDue = reviewDue.length > 0;
+    const hasNewCards = newCards.length > 0;
+
+    if (hasReviewDue && hasNewCards) {
+      if (Math.random() < INTERLEAVING_RATIO) {
+        return pickFromReviewDue()!;
+      } else {
+        return newCards[Math.floor(Math.random() * newCards.length)];
+      }
+    }
+
+    // 3. Только reviewDue
+    if (hasReviewDue) {
+      return pickFromReviewDue()!;
+    }
+
+    // 4. Только newCards
+    if (hasNewCards) {
+      return newCards[Math.floor(Math.random() * newCards.length)];
+    }
+
+    // 5. Fallback: все слова на кулдауне (coolingCards)
+    if (coolingCards.length > 0) {
+      // Если есть несколько карточек на кулдауне, исключаем самое последнее свайпнутое слово,
+      // чтобы не показывать его сразу снова.
+      if (coolingCards.length > 1 && recentGreeks.length > 0) {
+        const mostRecentGreek = recentGreeks[recentGreeks.length - 1];
+        const filteredCooling = coolingCards.filter(
+          (item) => item.greek !== mostRecentGreek
+        );
+        if (filteredCooling.length > 0) {
+          return filteredCooling[0]; // самое давнее из оставшихся
+        }
+        // Если после исключения не осталось карточек, возвращаем самую давнюю из исходных
+        // (такая ситуация возможна, если все кандидаты в coolingCards, кроме recent, отсутствуют)
+      }
+      return coolingCards[0];
+    }
+
+    // Крайний случай: если pool пуст (все в recent), берем из исходных кандидатов
+    // с самым давним просмотром
+    const fallbackCandidates = candidates
+      .filter((item) => !recentSet.has(item.greek))
+      .sort((a, b) => {
+        const recordA = srsMap[a.greek];
+        const recordB = srsMap[b.greek];
+        const lastA = recordA?.lastReviewedAt ?? 0;
+        const lastB = recordB?.lastReviewedAt ?? 0;
+        return lastA - lastB;
+      });
+
+    if (fallbackCandidates.length > 0) {
+      return fallbackCandidates[0];
+    }
+
+    // Абсолютный fallback: первое слово из candidates
+    return candidates[0];
   },
 };

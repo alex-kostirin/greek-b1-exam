@@ -119,7 +119,7 @@ export function appReducer(state: AppState, intent: AppIntent): AppState {
         ...state,
         activeModule: intent.module,
         currentCard: nextCard,
-        recentGreeks: [...state.recentGreeks.slice(-8), nextCard.greek],
+        recentGreeks: [...state.recentGreeks.slice(-14), nextCard.greek],
         isCardRevealed: false,
         lastGradedCardSnapshot: null,
         quizQuestion: generateQuizQuestion(nextCard, allVocab),
@@ -173,7 +173,7 @@ export function appReducer(state: AppState, intent: AppIntent): AppState {
         state.groupingMode,
         state.activeClickChapter,
       );
-      const updatedRecent = [...state.recentGreeks.slice(-8), currentGreek];
+      const updatedRecent = [...state.recentGreeks.slice(-14), currentGreek];
       const nextCard = srsService.pickNextSmartCard(
         nextPool,
         updatedSrsMap,
@@ -187,7 +187,7 @@ export function appReducer(state: AppState, intent: AppIntent): AppState {
         streakCount: intent.isKnown ? state.streakCount + 1 : 0,
         isCardRevealed: false,
         currentCard: nextCard,
-        recentGreeks: [...updatedRecent.slice(-8), nextCard.greek],
+        recentGreeks: [...updatedRecent.slice(-14), nextCard.greek],
         lastGradedCardSnapshot: snapshot,
       };
     }
@@ -261,7 +261,7 @@ export function appReducer(state: AppState, intent: AppIntent): AppState {
       return {
         ...state,
         currentCard: nextTarget,
-        recentGreeks: [...state.recentGreeks.slice(-8), nextTarget.greek],
+        recentGreeks: [...state.recentGreeks.slice(-14), nextTarget.greek],
         quizQuestion: generateQuizQuestion(nextTarget, allVocab),
       };
     }
@@ -537,7 +537,7 @@ export function appReducer(state: AppState, intent: AppIntent): AppState {
           state.recentGreeks,
         );
         nextRecentGreeks = [
-          ...state.recentGreeks.slice(-8),
+          ...state.recentGreeks.slice(-14),
           nextCard.greek,
         ];
         nextQuizQuestion = generateQuizQuestion(nextCard, allVocab);
@@ -592,7 +592,7 @@ export function appReducer(state: AppState, intent: AppIntent): AppState {
         activeClickChapter: newClickChapter,
         activeModule: newActiveModule,
         currentCard: nextCard,
-        recentGreeks: [...state.recentGreeks.slice(-8), nextCard.greek],
+        recentGreeks: [...state.recentGreeks.slice(-14), nextCard.greek],
         isCardRevealed: false,
         lastGradedCardSnapshot: null,
         quizQuestion: generateQuizQuestion(nextCard, allVocab),
@@ -625,7 +625,7 @@ export function appReducer(state: AppState, intent: AppIntent): AppState {
         activeClickChapter: chapter,
         activeModule: newActiveModule,
         currentCard: nextCard,
-        recentGreeks: [...state.recentGreeks.slice(-8), nextCard.greek],
+        recentGreeks: [...state.recentGreeks.slice(-14), nextCard.greek],
         isCardRevealed: false,
         lastGradedCardSnapshot: null,
         quizQuestion: generateQuizQuestion(nextCard, allVocab),

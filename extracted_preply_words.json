@@ -1,0 +1,318 @@
+{
+  "extractedAt": "2026-11-01T21:31:31.084Z",
+  "totalMessages": 19,
+  "tutorGreekMessagesCount": 17,
+  "tutorWords": [
+    {
+      "text": "αποδρώ - θα αποδράσω",
+      "phrases": [
+        "αποδρώ",
+        "θα αποδράσω"
+      ],
+      "timestamp": null
+    },
+    {
+      "text": "απέδρασα",
+      "phrases": [
+        "απέδρασα"
+      ],
+      "timestamp": null
+    },
+    {
+      "text": "φημίζομαι",
+      "phrases": [
+        "φημίζομαι"
+      ],
+      "timestamp": null
+    },
+    {
+      "text": "η φήμη",
+      "phrases": [
+        "η φήμη"
+      ],
+      "timestamp": null
+    },
+    {
+      "text": "κατάγομαι από",
+      "phrases": [
+        "κατάγομαι από"
+      ],
+      "timestamp": null
+    },
+    {
+      "text": "η καταγωγή",
+      "phrases": [
+        "η καταγωγή"
+      ],
+      "timestamp": null
+    },
+    {
+      "text": "απαραίτητος",
+      "phrases": [
+        "απαραίτητος"
+      ],
+      "timestamp": null
+    },
+    {
+      "text": "ημι-διατροφή",
+      "phrases": [
+        "ημι-διατροφή"
+      ],
+      "timestamp": null
+    },
+    {
+      "text": "διακοσμώ",
+      "phrases": [
+        "διακοσμώ"
+      ],
+      "timestamp": null
+    },
+    {
+      "text": "κοσμοπολίτικο",
+      "phrases": [
+        "κοσμοπολίτικο"
+      ],
+      "timestamp": null
+    },
+    {
+      "text": "εξοπλισμός",
+      "phrases": [
+        "εξοπλισμός"
+      ],
+      "timestamp": null
+    },
+    {
+      "text": "διανυκτέρευση",
+      "phrases": [
+        "διανυκτέρευση"
+      ],
+      "timestamp": null
+    },
+    {
+      "text": "δια-",
+      "phrases": [
+        "δια"
+      ],
+      "timestamp": null
+    },
+    {
+      "text": "κατάλυμα",
+      "phrases": [
+        "κατάλυμα"
+      ],
+      "timestamp": null
+    },
+    {
+      "text": "εξωτικά",
+      "phrases": [
+        "εξωτικά"
+      ],
+      "timestamp": null
+    },
+    {
+      "text": "το μέρος /τα μέρη",
+      "phrases": [
+        "το μέρος /τα μέρη"
+      ],
+      "timestamp": null
+    },
+    {
+      "text": "Καλημέρα Αλεξέι! Δεν υπάρχει κανένα πρόβλημα, ευχαριστώ! Καλή επιτυχία με τη συνάντηση! Τα λέμε τη Δευτέρα.",
+      "phrases": [
+        "Καλημέρα Αλεξέι! Δεν υπάρχει κανένα πρόβλημα, ευχαριστώ! Καλή επιτυχία με τη συνάντηση! Τα λέμε τη Δευτέρα"
+      ],
+      "timestamp": null
+    }
+  ],
+  "allMessages": [
+    {
+      "text": "αποδρώ - θα αποδράσω",
+      "isIncoming": true,
+      "sender": "Преподаватель",
+      "isGreek": true,
+      "greekPhrases": [
+        "αποδρώ",
+        "θα αποδράσω"
+      ],
+      "timestamp": null
+    },
+    {
+      "text": "απέδρασα",
+      "isIncoming": true,
+      "sender": "Преподаватель",
+      "isGreek": true,
+      "greekPhrases": [
+        "απέδρασα"
+      ],
+      "timestamp": null
+    },
+    {
+      "text": "φημίζομαι",
+      "isIncoming": true,
+      "sender": "Преподаватель",
+      "isGreek": true,
+      "greekPhrases": [
+        "φημίζομαι"
+      ],
+      "timestamp": null
+    },
+    {
+      "text": "η φήμη",
+      "isIncoming": true,
+      "sender": "Преподаватель",
+      "isGreek": true,
+      "greekPhrases": [
+        "η φήμη"
+      ],
+      "timestamp": null
+    },
+    {
+      "text": "κατάγομαι από",
+      "isIncoming": true,
+      "sender": "Преподаватель",
+      "isGreek": true,
+      "greekPhrases": [
+        "κατάγομαι από"
+      ],
+      "timestamp": null
+    },
+    {
+      "text": "η καταγωγή",
+      "isIncoming": true,
+      "sender": "Преподаватель",
+      "isGreek": true,
+      "greekPhrases": [
+        "η καταγωγή"
+      ],
+      "timestamp": null
+    },
+    {
+      "text": "απαραίτητος",
+      "isIncoming": true,
+      "sender": "Преподаватель",
+      "isGreek": true,
+      "greekPhrases": [
+        "απαραίτητος"
+      ],
+      "timestamp": null
+    },
+    {
+      "text": "ημι-διατροφή",
+      "isIncoming": true,
+      "sender": "Преподаватель",
+      "isGreek": true,
+      "greekPhrases": [
+        "ημι-διατροφή"
+      ],
+      "timestamp": null
+    },
+    {
+      "text": "διακοσμώ",
+      "isIncoming": true,
+      "sender": "Преподаватель",
+      "isGreek": true,
+      "greekPhrases": [
+        "διακοσμώ"
+      ],
+      "timestamp": null
+    },
+    {
+      "text": "κοσμοπολίτικο",
+      "isIncoming": true,
+      "sender": "Преподаватель",
+      "isGreek": true,
+      "greekPhrases": [
+        "κοσμοπολίτικο"
+      ],
+      "timestamp": null
+    },
+    {
+      "text": "εξοπλισμός",
+      "isIncoming": true,
+      "sender": "Преподаватель",
+      "isGreek": true,
+      "greekPhrases": [
+        "εξοπλισμός"
+      ],
+      "timestamp": null
+    },
+    {
+      "text": "διανυκτέρευση",
+      "isIncoming": true,
+      "sender": "Преподаватель",
+      "isGreek": true,
+      "greekPhrases": [
+        "διανυκτέρευση"
+      ],
+      "timestamp": null
+    },
+    {
+      "text": "δια-",
+      "isIncoming": true,
+      "sender": "Преподаватель",
+      "isGreek": true,
+      "greekPhrases": [
+        "δια"
+      ],
+      "timestamp": null
+    },
+    {
+      "text": "κατάλυμα",
+      "isIncoming": true,
+      "sender": "Преподаватель",
+      "isGreek": true,
+      "greekPhrases": [
+        "κατάλυμα"
+      ],
+      "timestamp": null
+    },
+    {
+      "text": "εξωτικά",
+      "isIncoming": true,
+      "sender": "Преподаватель",
+      "isGreek": true,
+      "greekPhrases": [
+        "εξωτικά"
+      ],
+      "timestamp": null
+    },
+    {
+      "text": "Афины находятся в 300 километрах от Патр",
+      "isIncoming": true,
+      "sender": "Преподаватель",
+      "isGreek": false,
+      "greekPhrases": [],
+      "timestamp": null
+    },
+    {
+      "text": "το μέρος /τα μέρη",
+      "isIncoming": true,
+      "sender": "Преподаватель",
+      "isGreek": true,
+      "greekPhrases": [
+        "το μέρος /τα μέρη"
+      ],
+      "timestamp": null
+    },
+    {
+      "text": "Γεια σου! Συγγνώμη, πρέπει να λείψω από το σημερινό μάθημα. Μόλις μου έβαλαν μια συνάντηση που δεν μπορώ να χάσω. Τα λέμε τη Δευτέρα",
+      "isIncoming": false,
+      "sender": "Студент",
+      "isGreek": true,
+      "greekPhrases": [
+        "Γεια σου! Συγγνώμη, πρέπει να λείψω από το σημερινό μάθημα. Μόλις μου έβαλαν μια συνάντηση που δεν μπορώ να χάσω. Τα λέμε τη Δευτέρα"
+      ],
+      "timestamp": null
+    },
+    {
+      "text": "Καλημέρα Αλεξέι! Δεν υπάρχει κανένα πρόβλημα, ευχαριστώ! Καλή επιτυχία με τη συνάντηση! Τα λέμε τη Δευτέρα.",
+      "isIncoming": true,
+      "sender": "Преподаватель",
+      "isGreek": true,
+      "greekPhrases": [
+        "Καλημέρα Αλεξέι! Δεν υπάρχει κανένα πρόβλημα, ευχαριστώ! Καλή επιτυχία με τη συνάντηση! Τα λέμε τη Δευτέρα"
+      ],
+      "timestamp": null
+    }
+  ]
+}

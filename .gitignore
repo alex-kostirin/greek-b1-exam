@@ -8,4 +8,6 @@ greek-b1-app/dist/
 .env
 .env.local
 .agents/scratch/
+.agents/cache/
+.preply-profile/
 
