@@ -12,7 +12,7 @@ export const CLICK_CHAPTER_LABELS: Record<number, string> = {
   1: 'Κεφ. 1: Характер и семья',
   2: 'Κεφ. 2: Дом и переезд',
   3: 'Κεφ. 3: Время и досуг',
-  4: 'Κεφ. 4: Επανάληψη 1-3 (Связки)',
+  4: 'Κεφ. 4: Дружба и характер',
   5: 'Κεφ. 5: Путешествия и отели',
   6: 'Κεφ. 6: Покупки и скидки',
   7: 'Κεφ. 7: Здоровье и медицина',
@@ -27,18 +27,18 @@ const TOP_VERBS_MODULE = '11. Топ-Глаголы B1';
 
 const MODULE_CLICK_CHAPTERS: Record<string, readonly number[]> = {
   '1. Характер': [1, 4],
-  '2. Жилье и переезд': [2, 4],
-  '3. Время и досуг': [3, 4],
-  '12. Связки и Штампы': [4, 12],
-  '13. Чтение №3 (Формы)': [4, 8, 12],
-  '4. Путешествия': [5, 8],
-  '5. Покупки и жалобы': [6, 8],
-  '6. Здоровье и ЗОЖ': [7, 8, 12],
+  '2. Жилье и переезд': [2],
+  '3. Время и досуг': [3],
+  '12. Связки и Штампы': [12],
+  '13. Чтение №3 (Формы)': [12],
+  '4. Путешествия': [5],
+  '5. Покупки и жалобы': [6],
+  '6. Здоровье и ЗОЖ': [7],
   '14. Ловушки Аудирования': [8, 12],
   '7. Экология и Кипр': [9, 12],
   '9. Технологии и СМИ': [10, 12],
-  '8. Работа и учеба': [11, 12],
-  '10. Город и службы': [11, 12],
+  '8. Работа и учеба': [11],
+  '10. Город и службы': [11],
 };
 
 const TOP_VERB_DISTRIBUTION_CHAPTERS = [1, 2, 3, 5, 6, 7, 9, 10, 11, 12] as const;
@@ -60,10 +60,6 @@ function resolveTopVerbClickChapters(item: VocabularyItem, index?: number): numb
   const distributionIndex = hash % TOP_VERB_DISTRIBUTION_CHAPTERS.length;
   const primaryChapter = TOP_VERB_DISTRIBUTION_CHAPTERS[distributionIndex] ?? 12;
   const chapters: number[] = [primaryChapter];
-
-  if (primaryChapter === 1 || primaryChapter === 2 || primaryChapter === 3) {
-    chapters.push(4);
-  }
 
   if (primaryChapter === 5 || primaryChapter === 6 || primaryChapter === 7) {
     chapters.push(8);
