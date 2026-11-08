@@ -8,6 +8,7 @@ import { BATCH5_SCENES } from './batch5';
 import { BATCH6_SCENES } from './batch6';
 import { BATCH7_SCENES } from './batch7';
 import { BATCH8_SCENES } from './batch8';
+import { BATCH9_SCENES } from './batch9';
 
 /**
  * Curated illustrations for the built-in vocabulary.
@@ -24,6 +25,7 @@ export const WORD_VISUAL_SCENES: Record<string, WordVisualScene> = {
   ...BATCH6_SCENES,
   ...BATCH7_SCENES,
   ...BATCH8_SCENES,
+  ...BATCH9_SCENES,
 };
 
 const FALLBACK_SVG_MOTIF = `
@@ -78,7 +80,7 @@ const MODULE_FALLBACK_SCENES: Record<string, WordVisualScene> = {
     'from-indigo-500/30 via-purple-500/20 to-slate-900',
     'bg-indigo-400/25',
   ),
-  '2. Жилье и переезд': createFallbackScene(
+  '2. Жилье и перезд': createFallbackScene(
     'Дом и переезд',
     '🏠',
     '🚚',
@@ -109,7 +111,7 @@ const MODULE_FALLBACK_SCENES: Record<string, WordVisualScene> = {
   '6. Здоровье и ЗОЖ': createFallbackScene(
     'Здоровье и привычки',
     '🥗',
-    '🩺',
+    '',
     'from-green-500/30 via-emerald-500/20 to-slate-900',
     'bg-green-400/25',
   ),
@@ -120,7 +122,7 @@ const MODULE_FALLBACK_SCENES: Record<string, WordVisualScene> = {
     'from-emerald-500/30 via-lime-500/20 to-slate-900',
     'bg-emerald-400/25',
   ),
-  '8. Работа и учеба': createFallbackScene(
+  '8. Работа и учёба': createFallbackScene(
     'Работа и учёба',
     '💼',
     '📝',
@@ -134,8 +136,8 @@ const MODULE_FALLBACK_SCENES: Record<string, WordVisualScene> = {
     'from-violet-500/30 via-purple-500/20 to-slate-900',
     'bg-violet-400/25',
   ),
-  '10. Город и службы': createFallbackScene(
-    'Город и службы',
+  '10. Город и служды': createFallbackScene(
+    'Город и служды',
     '🏙️',
     '🚌',
     'from-sky-500/30 via-slate-500/20 to-slate-900',
@@ -149,7 +151,7 @@ const MODULE_FALLBACK_SCENES: Record<string, WordVisualScene> = {
     'bg-amber-400/25',
   ),
   '12. Связки и Штампы': createFallbackScene(
-    'Полезные выражения',
+    'Полезные вырадения',
     '✍️',
     '📜',
     'from-teal-500/30 via-cyan-500/20 to-slate-900',
