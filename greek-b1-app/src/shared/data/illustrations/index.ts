@@ -6,6 +6,7 @@ import { BATCH3_SCENES } from './batch3';
 import { BATCH4_SCENES } from './batch4';
 import { BATCH5_SCENES } from './batch5';
 import { BATCH6_SCENES } from './batch6';
+import { BATCH7_SCENES } from './batch7';
 
 /**
  * Curated illustrations for the built-in vocabulary.
@@ -20,6 +21,7 @@ export const WORD_VISUAL_SCENES: Record<string, WordVisualScene> = {
   ...BATCH4_SCENES,
   ...BATCH5_SCENES,
   ...BATCH6_SCENES,
+  ...BATCH7_SCENES,
 };
 
 const FALLBACK_SVG_MOTIF = `
