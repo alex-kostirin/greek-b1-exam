@@ -1,5 +1,6 @@
 import type { EssayTopic } from '../types/essay';
 import { ESSAY_TOPICS_DATASET } from './essayDataset';
+import { SIMULATION_TESTS_ESSAYS } from './simulationTestsEssays';
 
 export const KEG_2015_2018_ESSAY_TOPICS: EssayTopic[] = [
   {
@@ -491,4 +492,8 @@ export const KEG_2015_2018_ESSAY_TOPICS: EssayTopic[] = [
   },
 ];
 
-export const ALL_ESSAY_TOPICS: EssayTopic[] = [...ESSAY_TOPICS_DATASET, ...KEG_2015_2018_ESSAY_TOPICS];
+export const ALL_ESSAY_TOPICS: EssayTopic[] = [
+  ...ESSAY_TOPICS_DATASET,
+  ...KEG_2015_2018_ESSAY_TOPICS,
+  ...SIMULATION_TESTS_ESSAYS,
+];

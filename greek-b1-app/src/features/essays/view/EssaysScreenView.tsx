@@ -17,6 +17,7 @@ type EssaySubTab = 'informal' | 'formal' | 'templates';
 type EssaySourceFilter =
   | 'all'
   | 'pinned'
+  | 'sim_tests'
   | 'exam_chat'
   | 'keg_2015_2018'
   | 'textbooks'
@@ -726,6 +727,8 @@ export const EssaysScreenView: React.FC<EssaysScreenViewProps> = ({
         switch (sourceFilter) {
           case 'pinned':
             return pinnedSet.has(topic.id);
+          case 'sim_tests':
+            return topic.sourceType === 'sim_tests';
           case 'exam_chat':
             return topic.sourceType === 'exam_chat';
           case 'keg_2015_2018':
@@ -765,10 +768,11 @@ export const EssaysScreenView: React.FC<EssaysScreenViewProps> = ({
   const filterOptions: { id: EssaySourceFilter; label: string }[] = [
     { id: 'all', label: 'Все' },
     { id: 'pinned', label: `📌 Закреплённые (${pinnedCount})` },
+    { id: 'sim_tests', label: '🎯 Тесты-симуляторы' },
     { id: 'exam_chat', label: '🔥 Из чата @cylang' },
     { id: 'keg_2015_2018', label: '📕 Сборник 2015–2018' },
     { id: 'textbooks', label: '📘 Учебники Κλικ / Ελληνικά' },
-    { id: 'completed', label: '✅ Написанные' },
+    { id: 'completed', label: `✅ Написанные` },
   ];
 
   const handleSubTabSelect = (nextSubTab: EssaySubTab) => {

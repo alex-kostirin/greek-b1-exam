@@ -1,6 +1,6 @@
 export type EssayRegister = 'informal' | 'formal';
 export type EssaySubType = 'friend_letter' | 'complaint' | 'initiative_request' | 'announcement_article';
-export type EssaySourceType = 'exam_chat' | 'keg_2015_2018' | 'klik_b1' | 'ellinika_b';
+export type EssaySourceType = 'exam_chat' | 'keg_2015_2018' | 'klik_b1' | 'ellinika_b' | 'sim_tests';
 
 export interface EssayVocabHintItem {
   greek: string;
