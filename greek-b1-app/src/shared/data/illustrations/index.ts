@@ -11,6 +11,7 @@ import { BATCH8_SCENES } from './batch8';
 import { BATCH9_SCENES } from './batch9';
 import { BATCH10_SCENES } from './batch10';
 import { BATCH11_SCENES } from './batch11';
+import { BATCH12_SCENES } from './batch12';
 
 /**
  * Curated illustrations for the built-in vocabulary.
@@ -30,6 +31,7 @@ export const WORD_VISUAL_SCENES: Record<string, WordVisualScene> = {
   ...BATCH9_SCENES,
   ...BATCH10_SCENES,
   ...BATCH11_SCENES,
+  ...BATCH12_SCENES,
 };
 
 const FALLBACK_SVG_MOTIF = `
@@ -174,6 +176,13 @@ const MODULE_FALLBACK_SCENES: Record<string, WordVisualScene> = {
     '💡',
     'from-rose-500/30 via-orange-500/20 to-slate-900',
     'bg-rose-400/25',
+  ),
+  '15. Тесты-симуляторы': createFallbackScene(
+    'Тесты-симуляторы',
+    '🎯',
+    '📑',
+    'from-amber-500/30 via-orange-500/20 to-slate-900',
+    'bg-amber-400/25',
   ),
 };
 
